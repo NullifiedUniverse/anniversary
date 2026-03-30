@@ -8,16 +8,22 @@ export async function parseFiles(files: File[]): Promise<ChatMessage[]> {
   let allMessages: ChatMessage[] = [];
 
   for (const file of files) {
-    const text = await file.text();
-    if (file.name.endsWith('.json')) {
-      allMessages = allMessages.concat(parseJson(text));
-    } else if (file.name.endsWith('.html')) {
-      allMessages = allMessages.concat(parseHtml(text));
+    try {
+      const text = await file.text();
+      if (file.name.endsWith('.json')) {
+        allMessages = allMessages.concat(parseJson(text));
+      } else if (file.name.endsWith('.html') || file.name.endsWith('.htm')) {
+        allMessages = allMessages.concat(parseHtml(text));
+      }
+    } catch (err) {
+      console.error(`Failed to read file: ${file.name}`, err);
     }
   }
 
   // Sort by timestamp ascending
-  return allMessages.sort((a, b) => a.timestamp - b.timestamp);
+  return allMessages
+    .filter(msg => msg.content && msg.sender && !isNaN(msg.timestamp))
+    .sort((a, b) => a.timestamp - b.timestamp);
 }
 
 function parseJson(text: string): ChatMessage[] {
@@ -26,13 +32,32 @@ function parseJson(text: string): ChatMessage[] {
     const messages: ChatMessage[] = [];
 
     // Instagram JSON format usually has a "messages" array
-    if (data.messages && Array.isArray(data.messages)) {
-      for (const msg of data.messages) {
-        if (msg.content && msg.sender_name && msg.timestamp_ms) {
+    // It can be top-level or nested under some keys
+    const findMessages = (obj: any): any[] | null => {
+      if (obj && Array.isArray(obj.messages)) return obj.messages;
+      if (typeof obj === 'object' && obj !== null) {
+        for (const key in obj) {
+          const res = findMessages(obj[key]);
+          if (res) return res;
+        }
+      }
+      return null;
+    };
+
+    const rawMessages = findMessages(data);
+
+    if (rawMessages) {
+      for (const msg of rawMessages) {
+        // Handle different possible key names (IG changes them occasionally)
+        const sender = msg.sender_name || msg.sender;
+        const content = msg.content || msg.text || msg.share?.link || msg.media?.uri;
+        const timestamp = msg.timestamp_ms || msg.timestamp || (msg.created_at ? new Date(msg.created_at).getTime() : null);
+
+        if (sender && content && timestamp) {
           messages.push({
-            sender: msg.sender_name,
-            timestamp: msg.timestamp_ms,
-            content: msg.content,
+            sender: String(sender),
+            timestamp: Number(timestamp),
+            content: String(content),
           });
         }
       }
@@ -50,65 +75,51 @@ function parseHtml(text: string): ChatMessage[] {
     const parser = new DOMParser();
     const doc = parser.parseFromString(text, 'text/html');
     
-    // Instagram HTML exports typically have messages in divs with specific classes.
-    // We'll try a generic approach: look for elements that might be messages.
-    // Often, they are structured as: Sender Name -> Message Content -> Timestamp
+    // Strategy 1: Look for modern IG HTML export structure (divs with specific classes)
+    const messageBlocks = doc.querySelectorAll('.pam, ._3-95, ._2pi0, .uiBoxWhite');
     
-    // A common pattern in IG HTML exports:
-    // <div class="pam _3-95 _2pi0 _2lej uiBoxWhite noborder">
-    //   <div class="_3-96 _2pio _2lek _2lel">Sender Name</div>
-    //   <div class="_3-96 _2let"><div><div></div><div>Message Content</div></div></div>
-    //   <div class="_3-94 _2lem">Timestamp</div>
-    // </div>
-    
-    // Let's try to find blocks that look like messages
-    const possibleMessageBlocks = doc.querySelectorAll('.pam, .uiBoxWhite, .message');
-    
-    if (possibleMessageBlocks.length > 0) {
-      possibleMessageBlocks.forEach(block => {
-        const divs = block.querySelectorAll('div');
-        if (divs.length >= 3) {
-           // Very rough heuristic
-           const sender = divs[0]?.textContent?.trim();
-           const content = divs[1]?.textContent?.trim();
-           const timeStr = divs[divs.length - 1]?.textContent?.trim();
-           
-           if (sender && content && timeStr) {
-             const timestamp = new Date(timeStr).getTime();
-             if (!isNaN(timestamp)) {
-               messages.push({ sender, content, timestamp });
-             }
-           }
+    if (messageBlocks.length > 0) {
+      messageBlocks.forEach(block => {
+        // Try to find sender, content, and timestamp within the block
+        const sender = block.querySelector('._3-96, ._2pio, ._2lek, ._2lel')?.textContent?.trim();
+        const content = block.querySelector('._3-96._2let, ._2let, div > div > div:nth-child(2)')?.textContent?.trim();
+        const timestampStr = block.querySelector('._3-94, ._2lem, ._a3sc')?.textContent?.trim();
+        
+        if (sender && content && timestampStr) {
+          const timestamp = new Date(timestampStr).getTime();
+          if (!isNaN(timestamp)) {
+            messages.push({ sender, content, timestamp });
+          }
         }
       });
-    } else {
-      // Fallback: just extract all text if we can't find specific blocks, 
-      // though this won't give us structured messages easily.
-      // We'll skip fallback for now to avoid garbage data, or we could try another heuristic.
-      const allDivs = doc.querySelectorAll('div');
-      let currentSender = '';
-      let currentContent = '';
+    }
+
+    // Strategy 2: If Strategy 1 failed or missed messages, try a more generic approach
+    if (messages.length === 0) {
+      // Look for message containers that usually have a sender name in bold or specific heading
+      const allDivs = Array.from(doc.querySelectorAll('div'));
       
       for (let i = 0; i < allDivs.length; i++) {
-        const text = allDivs[i].textContent?.trim();
-        if (!text) continue;
-        
-        // If it looks like a date
-        const date = new Date(text);
-        if (!isNaN(date.getTime()) && text.length > 10) {
-           if (currentSender && currentContent) {
-             messages.push({
-               sender: currentSender,
-               content: currentContent,
-               timestamp: date.getTime()
-             });
-             currentSender = '';
-             currentContent = '';
-           }
-        } else if (!currentSender) {
-          currentSender = text;
-        } else {
-          currentContent += text + ' ';
+        const div = allDivs[i];
+        // Common pattern: Sender name is often in a div followed by content and then a date
+        if (div.children.length === 0 && div.textContent?.trim()) {
+          const text = div.textContent.trim();
+          // Heuristic: If it's a short string (likely a name) and the next sibling is longer
+          if (text.length > 0 && text.length < 50) {
+            const nextDiv = div.nextElementSibling;
+            const dateDiv = nextDiv?.nextElementSibling;
+            
+            if (nextDiv && dateDiv) {
+              const content = nextDiv.textContent?.trim();
+              const dateStr = dateDiv.textContent?.trim();
+              const timestamp = dateStr ? new Date(dateStr).getTime() : NaN;
+              
+              if (content && !isNaN(timestamp)) {
+                messages.push({ sender: text, content, timestamp });
+                i += 2; // Skip the next two divs since we used them
+              }
+            }
+          }
         }
       }
     }
@@ -119,3 +130,4 @@ function parseHtml(text: string): ChatMessage[] {
     return [];
   }
 }
+
