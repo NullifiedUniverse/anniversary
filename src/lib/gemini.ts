@@ -79,8 +79,9 @@ const isJunkMessage = (text: string) => {
 export async function generateMemories(
   rawMessages: ChatMessage[],
   customApiKey?: string,
-  selectedModel: string = "gemini-2.0-flash"
+  selectedModel: string = "gemini-flash-latest"
 ): Promise<MemoryData> {
+
   if (rawMessages.length === 0) throw new Error("No messages found.");
 
   const messages = rawMessages.filter(m => !isJunkMessage(m.content));
@@ -206,7 +207,7 @@ export async function generateMoreItems(
   category: string,
   existingItems: any[],
   customApiKey?: string,
-  selectedModel: string = "gemini-1.5-flash"
+  selectedModel: string = "gemini-flash-latest"
 ): Promise<any[]> {
   const messages = rawMessages.filter(m => !isJunkMessage(m.content));
   if (messages.length === 0) return [];

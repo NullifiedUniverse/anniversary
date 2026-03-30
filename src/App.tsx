@@ -56,7 +56,7 @@ export default function App() {
   const [rawMessages, setRawMessages] = useState<ChatMessage[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [customApiKey, setCustomApiKey] = useState('');
-  const [selectedModel, setSelectedModel] = useState('gemini-1.5-flash');
+  const [selectedModel, setSelectedModel] = useState('gemini-flash-latest');
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   const { scrollYProgress } = useScroll();
@@ -229,9 +229,9 @@ export default function App() {
                             onChange={e => setSelectedModel(e.target.value)}
                             className="w-full px-5 py-3 rounded-2xl border border-gray-100 focus:ring-4 focus:ring-purple-500/10 focus:border-purple-500 outline-none bg-white/50 transition-all font-bold text-gray-700"
                           >
-                            <option value="gemini-1.5-flash">Gemini 1.5 Flash (Recommended)</option>
-                            <option value="gemini-1.5-pro">Gemini 1.5 Pro (Deep Analysis)</option>
-                            <option value="gemini-2.0-flash">Gemini 2.0 Flash (Latest)</option>
+                            <option value="gemini-flash-latest">Gemini Flash (Latest)</option>
+                            <option value="gemini-pro-latest">Gemini Pro (Deep Reasoning)</option>
+                            <option value="gemini-flash-lite-latest">Gemini Flash Lite (Fastest)</option>
                           </select>
                         </div>
                       </motion.div>
