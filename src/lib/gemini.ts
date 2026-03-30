@@ -206,7 +206,7 @@ export async function generateMoreItems(
   category: string,
   existingItems: any[],
   customApiKey?: string,
-  selectedModel: string = "gemini-2.0-flash"
+  selectedModel: string = "gemini-1.5-flash"
 ): Promise<any[]> {
   const messages = rawMessages.filter(m => !isJunkMessage(m.content));
   if (messages.length === 0) return [];

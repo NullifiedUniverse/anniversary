@@ -73,35 +73,37 @@ export function ExploreSection({ messages, participants }: ExploreSectionProps) 
             const context = messages.slice(Math.max(0, index - 2), Math.min(messages.length, index + 3));
 
             return (
-              <div key={index} className="bg-white/80 p-8 rounded-[2rem] border border-white/60 space-y-4 shadow-sm">
-                <div className="text-xs text-gray-400 font-bold tracking-widest uppercase text-center mb-4">
-                  {new Date(msg.timestamp).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}
+              <div key={index} className="bg-white/80 backdrop-blur-md p-8 rounded-[2.5rem] border border-white/60 space-y-6 shadow-sm hover:shadow-md transition-all">
+                <div className="text-[10px] text-gray-400 font-black tracking-[0.2em] uppercase text-center mb-2">
+                  {new Date(msg.timestamp).toLocaleString(undefined, { dateStyle: 'long', timeStyle: 'short' })}
                 </div>
                 
-                {context.map((m, i) => {
-                  const isMatch = m === msg;
-                  const isP1 = m.sender === participants[0];
-                  
-                  return (
-                    <div key={i} className={`flex flex-col ${isP1 ? 'items-start' : 'items-end'} ${!isMatch ? 'opacity-50 scale-95' : ''}`}>
-                      <div className="text-[10px] text-gray-500 mb-0.5 ml-2 font-bold uppercase tracking-wider">
-                        {formatName(m.sender)}
+                <div className="space-y-4">
+                  {context.map((m, i) => {
+                    const isMatch = m === msg;
+                    const isP1 = m.sender === participants[0];
+                    
+                    return (
+                      <div key={i} className={`flex flex-col ${isP1 ? 'items-start' : 'items-end'} ${!isMatch ? 'opacity-40 scale-[0.98]' : ''} transition-all`}>
+                        <div className={`text-[10px] text-gray-500 mb-1 ${isP1 ? 'ml-3' : 'mr-3'} font-bold uppercase tracking-wider`}>
+                          {formatName(m.sender)}
+                        </div>
+                        <div className={`px-6 py-3 rounded-[1.5rem] text-base max-w-[85%] font-medium shadow-sm border border-white/50 ${
+                          isMatch 
+                            ? (isP1 ? 'bg-teal-100 text-teal-900 border-teal-200' : 'bg-blue-100 text-blue-900 border-blue-200 shadow-indigo-100')
+                            : 'bg-gray-100/50 text-gray-600'
+                        }`}>
+                          {isMatch ? (
+                            m.content?.split(new RegExp(`(${searchTerm})`, 'gi')).map((part, j) => 
+                              part.toLowerCase() === searchTerm.toLowerCase() ? 
+                                <span key={j} className="bg-yellow-300/80 font-black rounded px-1 -mx-1">{part}</span> : part
+                            )
+                          ) : m.content}
+                        </div>
                       </div>
-                      <div className={`px-5 py-2.5 rounded-2xl text-base max-w-[85%] font-medium shadow-sm border border-white/50 ${
-                        isMatch 
-                          ? (isP1 ? 'bg-teal-100 text-teal-900 border-teal-200' : 'bg-blue-100 text-blue-900 border-blue-200')
-                          : 'bg-gray-100 text-gray-700'
-                      }`}>
-                        {isMatch ? (
-                          m.content?.split(new RegExp(`(${searchTerm})`, 'gi')).map((part, j) => 
-                            part.toLowerCase() === searchTerm.toLowerCase() ? 
-                              <span key={j} className="bg-yellow-300 font-black rounded px-0.5">{part}</span> : part
-                          )
-                        ) : m.content}
-                      </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
             );
           })}
