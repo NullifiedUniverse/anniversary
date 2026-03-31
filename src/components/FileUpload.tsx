@@ -1,8 +1,7 @@
 import React, { useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { UploadCloud, FileJson, FileCode2 } from 'lucide-react';
+import { Upload, FileText, Info } from 'lucide-react';
 import { motion } from 'motion/react';
-import { cn } from '../lib/utils';
 
 interface FileUploadProps {
   onFilesSelected: (files: File[]) => void;
@@ -10,79 +9,63 @@ interface FileUploadProps {
 
 export function FileUpload({ onFilesSelected }: FileUploadProps) {
   const onDrop = useCallback((acceptedFiles: File[]) => {
-    if (acceptedFiles.length > 0) {
-      onFilesSelected(acceptedFiles);
-    }
+    onFilesSelected(acceptedFiles);
   }, [onFilesSelected]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: {
-      'application/json': ['.json'],
-      'text/html': ['.html', '.htm']
+      'text/html': ['.html', '.htm'],
+      'application/json': ['.json']
     }
-  } as any);
+  });
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="w-full max-w-2xl mx-auto"
-    >
-      <div
+    <div className="w-full max-w-2xl mx-auto space-y-8">
+      <motion.div
         {...getRootProps()}
-        className={cn(
-          "border-2 border-dashed rounded-[3rem] p-16 text-center cursor-pointer transition-all duration-500 ease-in-out",
-          "bg-white/40 backdrop-blur-xl shadow-2xl relative overflow-hidden group",
-          isDragActive 
-            ? "border-pink-500 bg-pink-50/50 scale-[1.02]" 
-            : "border-gray-200 hover:border-purple-400 hover:bg-white/60"
-        )}
+        whileHover={{ scale: 1.01, borderColor: 'var(--color-romantic-pink)' }}
+        whileTap={{ scale: 0.99 }}
+        className={`
+          relative border-4 border-dashed rounded-[3rem] p-16
+          flex flex-col items-center justify-center text-center cursor-pointer
+          transition-all duration-300 backdrop-blur-xl
+          ${isDragActive 
+            ? 'border-pink-500 bg-pink-900/20 shadow-[0_0_50px_rgba(236,72,153,0.2)]' 
+            : 'border-gray-800 bg-gray-900/40 hover:bg-gray-900/60 hover:border-gray-700 shadow-2xl'
+          }
+        `}
       >
-        <div className="absolute inset-0 bg-gradient-to-tr from-purple-500/5 to-pink-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-        
         <input {...getInputProps()} />
-        <div className="flex justify-center mb-10 space-x-6 relative z-10">
-          <motion.div 
-            animate={isDragActive ? { scale: 1.2, rotate: -12 } : { scale: 1, rotate: -6 }}
-            className="p-5 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-3xl shadow-xl text-white"
-          >
-            <FileJson size={40} />
-          </motion.div>
-          <motion.div 
-            animate={isDragActive ? { scale: 1.2, rotate: 12 } : { scale: 1, rotate: 6 }}
-            className="p-5 bg-gradient-to-br from-pink-500 to-orange-400 rounded-3xl shadow-xl text-white"
-          >
-            <FileCode2 size={40} />
-          </motion.div>
+        
+        <div className="mb-8 p-6 bg-gray-800 rounded-full text-pink-500 shadow-inner group-hover:scale-110 transition-transform">
+          <Upload size={48} />
         </div>
         
-        <div className="relative z-10">
-          <h3 className="text-3xl font-black text-gray-900 mb-4">
-            Drop your story here
-          </h3>
-          <p className="text-lg text-gray-500 mb-10 max-w-md mx-auto leading-relaxed font-medium">
-            Upload your exported Instagram <span className="text-purple-600 font-bold">JSON</span> or <span className="text-pink-600 font-bold">HTML</span> message files to begin.
+        <h3 className="text-3xl font-black text-gray-100 mb-4 tracking-tight">
+          Drop your chat data here
+        </h3>
+        <p className="text-gray-400 text-lg font-medium max-w-sm leading-relaxed">
+          Select your Instagram <span className="text-pink-400 font-bold">.html</span> or <span className="text-purple-400 font-bold">.json</span> message files to begin.
+        </p>
+        
+        <div className="mt-8 flex items-center space-x-2 text-gray-500 bg-gray-950/50 px-4 py-2 rounded-full border border-gray-800">
+          <FileText size={16} />
+          <span className="text-sm font-bold uppercase tracking-widest">Zero-Knowledge Parsing</span>
+        </div>
+      </motion.div>
+
+      <div className="bg-blue-950/20 border border-blue-900/30 rounded-3xl p-6 flex items-start space-x-4 backdrop-blur-md">
+        <div className="p-2 bg-blue-900/30 rounded-xl text-blue-400">
+          <Info size={20} />
+        </div>
+        <div className="space-y-1">
+          <h4 className="text-sm font-black text-blue-300 uppercase tracking-wider">How to get your data?</h4>
+          <p className="text-sm text-blue-200/70 leading-relaxed font-medium">
+            Go to Instagram Settings &rarr; Accounts Center &rarr; Your information and permissions &rarr; Download your information. Select "Messages" and choose HTML or JSON format.
           </p>
-          <button className="px-10 py-4 bg-gray-900 text-white rounded-full font-bold shadow-xl hover:shadow-2xl hover:bg-black transform hover:-translate-y-1 transition-all duration-300">
-            Select Files
-          </button>
         </div>
       </div>
-      
-      <div className="mt-10 text-center space-y-3">
-        <p className="text-sm font-bold text-gray-400 uppercase tracking-widest flex items-center justify-center space-x-2">
-          <span>How to get your data</span>
-        </p>
-        <p className="text-sm text-gray-500 font-medium">
-          Instagram Settings → Your Activity → Download Your Information
-        </p>
-        <div className="flex items-center justify-center space-x-2 text-xs text-gray-400 pt-4">
-          <UploadCloud size={14} />
-          <span>Local processing • Secure AI analysis • No data stored</span>
-        </div>
-      </div>
-    </motion.div>
+    </div>
   );
 }
-

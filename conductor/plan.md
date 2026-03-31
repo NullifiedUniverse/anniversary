@@ -1,28 +1,45 @@
-# Implementation Plan: Anniversary Revamp & Redesign Phase 1
+# Implementation Plan: Anniversary UI Polish & API Robustness
 
-## Phase 1: Personalization & Aesthetic Foundation
-- [ ] Task: Inject "Null & Yun" Branding and Romantic Theme
-    - [ ] Update `product-guidelines.md` principles into a global CSS/Tailwind theme.
-    - [ ] Redesign `MemoriesHeader.tsx` with a romantic first-anniversary theme.
-- [ ] Task: Refine AI Narrative Prompts for Emotional Depth
-    - [ ] Update `src/lib/gemini.ts` prompts to be more "sweet and romantic."
-    - [ ] Test narrative generation with sample Null & Yun chat data.
-- [ ] Task: Conductor - User Manual Verification 'Phase 1' (Protocol in workflow.md)
+## Objective
+Fix visual bugs (tab bar scaling, missing elements), Recharts dimension warnings, and implement robust API handling to prevent 429 errors and resolve initialization bugs.
 
-## Phase 2: UI/UX & Interaction Revamp
-- [ ] Task: Redesign Relationship Stats as "Our Rhythm"
-    - [ ] Revamp `StatsSection.tsx` with a softer aesthetic and narrative context.
-    - [ ] Ensure Recharts components match the new romantic theme.
-- [ ] Task: Implement Fluid Story Transitions
-    - [ ] Add gentle Framer Motion transitions between sections.
-    - [ ] Update `useInfiniteMemories.ts` or section loading logic for a smoother flow.
-- [ ] Task: Conductor - User Manual Verification 'Phase 2' (Protocol in workflow.md)
+## Key Files & Context
+- `src/components/Memories.tsx`: Navigation bar and section layout.
+- `src/components/memories/StatsSection.tsx`: Recharts visualizations.
+- `src/components/memories/useInfiniteMemories.ts`: AI request orchestration.
+- `src/lib/gemini.ts`: AI analysis pipeline and proxy calls.
+- `vite.config.ts`: Integrated Gemini proxy.
 
-## Phase 3: Quality & Refinement
-- [ ] Task: Architectural Audit & Refactor
-    - [ ] Audit `App.tsx` for state management improvements.
-    - [ ] Remove redundant code and ensure strict TypeScript compliance.
-- [ ] Task: Bug Fixes & Edge Case Handling
-    - [ ] Address any identified parsing bugs in `parser.ts`.
-    - [ ] Final visual polish and cross-browser testing.
-- [ ] Task: Conductor - User Manual Verification 'Phase 3' (Protocol in workflow.md)
+## Implementation Steps
+
+### Phase 1: API Robustness & Rate Limiting
+- [ ] **Task: Implement Sequential AI Request Queue**
+    - [ ] Update `src/components/memories/useInfiniteMemories.ts` to use a singleton-style lock or queue for `generateMore` calls.
+    - [ ] Ensure only one "generate more" request is active at any time.
+    - [ ] Add a 1.5s delay between sequential requests to stay within rate limits.
+- [ ] **Task: Improve Proxy Error Handling**
+    - [ ] Update `vite.config.ts` to better parse and return specific error messages from the Google API (e.g., distinguishing between 429 and 400).
+- [ ] **Task: Rigorous Key Sanitization**
+    - [ ] Ensure `customApiKey` is `.trim()`ed in `App.tsx` and `gemini.ts` before every use.
+
+### Phase 2: Visual Polish & Scaling
+- [ ] **Task: Fix Tab Bar Scaling**
+    - [ ] Update `src/components/Memories.tsx` to use `max-w-[calc(100vw-2rem)]` for the floating nav.
+    - [ ] Improve mobile horizontal scrolling styling for the tabs.
+- [ ] **Task: Fix Recharts Dimension Warnings**
+    - [ ] In `StatsSection.tsx`, wrap `ResponsiveContainer` in a div with a stable, non-zero height that exists even before animation completes.
+    - [ ] Add `debounce={50}` to `ResponsiveContainer` to help with resizing during animations.
+- [ ] **Task: Audit Visibility in Dark Mode**
+    - [ ] Scan components for hardcoded light-mode colors (e.g., `text-gray-900`, `bg-white`) and replace with themed or dark-mode alternatives.
+
+### Phase 3: Verification
+- [ ] **Task: Verify Fixes**
+    - [ ] Confirm no 429 errors occur when scrolling through all sections.
+    - [ ] Confirm tab bar looks good on both mobile and desktop.
+    - [ ] Confirm Recharts warnings are gone from the console.
+    - [ ] Confirm all text is legible in the new romantic dark mode.
+
+## Verification & Testing
+- Manual verification of scrolling behavior with large datasets.
+- Inspection of browser console for Recharts and API errors.
+- Responsive design testing via browser dev tools.

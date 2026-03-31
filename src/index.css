@@ -11,16 +11,16 @@
 
 @layer base {
   body {
-    @apply bg-rose-50 text-gray-800;
+    @apply bg-gray-950 text-gray-100;
   }
 }
 
 @layer components {
   .dreamy-gradient {
-    @apply bg-gradient-to-br from-soft-peach to-soft-rose;
+    @apply bg-gradient-to-br from-gray-900 to-gray-800;
   }
   
   .romantic-text {
-    @apply text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-500;
+    @apply text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400;
   }
 }

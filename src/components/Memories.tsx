@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { MemoryData } from '../lib/gemini';
 import { ChatMessage } from '../lib/parser';
-import { Heart, BookOpen, BarChart3, Cloud, Star, Search } from 'lucide-react';
+import { Heart, BookOpen, BarChart3, Cloud, Star, Search, ChevronDown } from 'lucide-react';
 
 import { useInfiniteMemories } from './memories/useInfiniteMemories';
 import { MemoriesHeader } from './memories/MemoriesHeader';
@@ -46,17 +46,17 @@ export function Memories({ data, messages, customApiKey, selectedModel }: Memori
   };
 
   const tabs = [
-    { id: 'story', label: 'Our Story', icon: <BookOpen className="w-5 h-5" /> },
-    { id: 'stats', label: 'Our Rhythm', icon: <BarChart3 className="w-5 h-5" /> },
-    { id: 'words', label: 'Our Language', icon: <Cloud className="w-5 h-5" /> },
-    { id: 'highlights', label: 'Our Moments', icon: <Star className="w-5 h-5" /> },
-    { id: 'future', label: 'Our Future', icon: <Heart className="w-5 h-5" /> },
-    { id: 'explore', label: 'Explore', icon: <Search className="w-5 h-5" /> },
+    { id: 'story', label: 'Our Story', icon: <BookOpen className="w-4 h-4" /> },
+    { id: 'stats', label: 'Our Rhythm', icon: <BarChart3 className="w-4 h-4" /> },
+    { id: 'words', label: 'Our Language', icon: <Cloud className="w-4 h-4" /> },
+    { id: 'highlights', label: 'Our Moments', icon: <Star className="w-4 h-4" /> },
+    { id: 'future', label: 'Our Future', icon: <Heart className="w-4 h-4" /> },
+    { id: 'explore', label: 'Explore', icon: <Search className="w-4 h-4" /> },
   ];
 
   useEffect(() => {
     const handleScroll = () => {
-      const scrollPosition = window.scrollY + window.innerHeight / 3;
+      const scrollPosition = window.scrollY + window.innerHeight / 2;
       let currentSection = 'story';
 
       for (const [id, ref] of Object.entries(sectionRefs)) {
@@ -75,96 +75,76 @@ export function Memories({ data, messages, customApiKey, selectedModel }: Memori
     const ref = sectionRefs[id as keyof typeof sectionRefs];
     if (ref.current) {
       window.scrollTo({
-        top: ref.current.offsetTop - 100,
+        top: ref.current.offsetTop - 80,
         behavior: 'smooth'
       });
     }
   };
 
   const sectionVariants = {
-    hidden: { opacity: 0, scale: 0.95, y: 30 },
-    show: { opacity: 1, scale: 1, y: 0, transition: { type: "spring", stiffness: 50, damping: 20 } }
+    hidden: { opacity: 0, y: 40 },
+    show: { opacity: 1, y: 0, transition: { duration: 1, ease: [0.16, 1, 0.3, 1] } }
   };
 
   return (
-    <div className="w-full max-w-6xl mx-auto pb-32 relative">
+    <div className="w-full relative">
       
-      {/* Floating Navigation Bar */}
+      {/* Premium Floating Navigation */}
       <motion.div 
         initial={{ y: 100, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        transition={{ type: "spring", delay: 0.5 }}
-        className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 w-full max-w-4xl flex justify-center px-4 pointer-events-none"
+        transition={{ type: "spring", stiffness: 100, damping: 30, delay: 1 }}
+        className="fixed bottom-10 left-1/2 -translate-x-1/2 z-50 pointer-events-none"
       >
-        <div className="flex items-center justify-center gap-3 overflow-x-auto custom-scrollbar pb-4 pt-4 px-4 pointer-events-auto">
+        <div className="bg-black/40 backdrop-blur-3xl border border-white/10 p-2 rounded-full shadow-[0_20px_50px_rgba(0,0,0,0.5)] flex items-center gap-1 pointer-events-auto">
           {tabs.map((tab) => {
             const isActive = activeSection === tab.id;
             return (
               <button
                 key={tab.id}
                 onClick={() => scrollToSection(tab.id)}
-                className={`relative flex items-center space-x-2 px-5 py-3.5 rounded-full text-sm font-bold transition-all duration-500 whitespace-nowrap shadow-xl border backdrop-blur-xl ${
-                  isActive 
-                    ? 'text-white border-transparent scale-110 shadow-pink-500/40 z-20' 
-                    : 'bg-white/60 text-gray-500 border-white/50 hover:bg-white/90 hover:text-gray-900 hover:scale-105 hover:shadow-purple-500/20 z-10'
+                className={`relative group flex items-center gap-2 px-6 py-3 rounded-full transition-all duration-500 ${
+                  isActive ? 'text-white' : 'text-gray-500 hover:text-gray-300'
                 }`}
               >
                 {isActive && (
                   <motion.div
-                    layoutId="activeTab"
-                    className="absolute inset-0 bg-gradient-to-r from-purple-600 to-pink-500 rounded-full"
-                    transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                    layoutId="navGlow"
+                    className="absolute inset-0 bg-gradient-to-r from-indigo-600/80 to-pink-600/80 rounded-full -z-10 shadow-[0_0_20px_rgba(99,102,241,0.4)]"
+                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
                   />
                 )}
-                <span className="relative z-10">{tab.icon}</span>
-                <span className="relative z-10 hidden md:inline-block tracking-wide">{tab.label}</span>
+                <span className={`transition-transform duration-500 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`}>
+                  {tab.icon}
+                </span>
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] hidden xl:inline-block">
+                  {tab.label}
+                </span>
               </button>
             );
           })}
         </div>
       </motion.div>
 
-      {/* Page Content Area */}
-      <div className="flex flex-col space-y-32 py-12 px-4 md:px-12">
+      {/* Page Content */}
+      <div className="flex flex-col space-y-64 py-24">
         
-        <motion.div 
-          ref={sectionRefs.story}
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true, margin: "-100px" }}
-          variants={sectionVariants}
-        >
+        <motion.div ref={sectionRefs.story} initial="hidden" whileInView="show" viewport={{ once: true, margin: "-100px" }} variants={sectionVariants}>
           <MemoriesHeader participants={data.participants} vibe={data.vibe} />
-          <StorySection data={data} />
+          <div className="mt-32">
+            <StorySection data={data} />
+          </div>
         </motion.div>
 
-        <motion.div 
-          ref={sectionRefs.stats}
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true, margin: "-100px" }}
-          variants={sectionVariants}
-        >
+        <motion.div ref={sectionRefs.stats} initial="hidden" whileInView="show" viewport={{ once: true, margin: "-100px" }} variants={sectionVariants}>
           <StatsSection data={data} />
         </motion.div>
 
-        <motion.div 
-          ref={sectionRefs.words}
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true, margin: "-100px" }}
-          variants={sectionVariants}
-        >
+        <motion.div ref={sectionRefs.words} initial="hidden" whileInView="show" viewport={{ once: true, margin: "-100px" }} variants={sectionVariants}>
           <WordCloudSection data={data} />
         </motion.div>
 
-        <motion.div 
-          ref={sectionRefs.highlights}
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true, margin: "-100px" }}
-          variants={sectionVariants}
-        >
+        <motion.div ref={sectionRefs.highlights} initial="hidden" whileInView="show" viewport={{ once: true, margin: "-100px" }} variants={sectionVariants} className="space-y-64">
           <HighlightsSection 
             highlights={highlights}
             milestones={milestones}
@@ -187,13 +167,7 @@ export function Memories({ data, messages, customApiKey, selectedModel }: Memori
           />
         </motion.div>
 
-        <motion.div 
-          ref={sectionRefs.future}
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true, margin: "-100px" }}
-          variants={sectionVariants}
-        >
+        <motion.div ref={sectionRefs.future} initial="hidden" whileInView="show" viewport={{ once: true, margin: "-100px" }} variants={sectionVariants}>
           <FutureSection 
             adventures={futureAdventures}
             superlatives={superlatives}
@@ -204,35 +178,32 @@ export function Memories({ data, messages, customApiKey, selectedModel }: Memori
           />
         </motion.div>
 
-        <motion.div 
-          ref={sectionRefs.explore}
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true, margin: "-100px" }}
-          variants={sectionVariants}
-        >
+        <motion.div ref={sectionRefs.explore} initial="hidden" whileInView="show" viewport={{ once: true, margin: "-100px" }} variants={sectionVariants}>
           <ExploreSection messages={messages} participants={data.participants} />
         </motion.div>
 
-        {/* CELEBRATION FOOTER */}
+        {/* Cinematic Footer */}
         <motion.div 
           initial={{ opacity: 0 }} 
           whileInView={{ opacity: 1 }} 
-          viewport={{ once: true, margin: "-100px" }}
-          className="max-w-4xl mx-auto pt-32 pb-16 text-center"
+          viewport={{ once: true }}
+          className="max-w-5xl mx-auto pt-64 pb-32 text-center relative"
         >
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-px h-32 bg-gradient-to-b from-transparent via-pink-500/50 to-transparent" />
+          
           <motion.div 
-            animate={{ scale: [1, 1.1, 1], rotate: [0, 5, -5, 0] }} 
-            transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
-            className="inline-block mb-8"
+            animate={{ scale: [1, 1.05, 1], opacity: [0.5, 1, 0.5] }} 
+            transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
+            className="inline-block mb-12"
           >
-            <Heart aria-label="Big heart icon" className="w-24 h-24 text-pink-500 fill-pink-500" />
+            <Heart aria-label="Big heart icon" className="w-32 h-32 text-pink-500 fill-pink-500 blur-[2px]" />
           </motion.div>
-          <h2 className="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-500 mb-6">
-            Happy Anniversary!
+          
+          <h2 className="text-8xl md:text-[10rem] font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white via-white to-gray-500 mb-8 leading-none">
+            Forever<br/>Begins.
           </h2>
-          <p className="text-2xl text-gray-600 font-medium max-w-2xl mx-auto">
-            Here's to many more messages, memories, and moments together.
+          <p className="text-2xl md:text-3xl text-gray-500 font-medium tracking-[0.2em] uppercase max-w-2xl mx-auto">
+            Happy Anniversary, Null & Yun.
           </p>
         </motion.div>
 

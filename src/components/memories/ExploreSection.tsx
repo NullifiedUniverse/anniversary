@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { motion } from 'motion/react';
-import { Search } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { Search, Calendar, User, MessageCircle } from 'lucide-react';
 import { ChatMessage } from '../../lib/parser';
 
 interface ExploreSectionProps {
@@ -10,25 +10,28 @@ interface ExploreSectionProps {
 
 export function ExploreSection({ messages, participants }: ExploreSectionProps) {
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedSender, setSelectedSender] = useState<string>('all');
+
+  const filteredMessages = useMemo(() => {
+    if (!searchTerm && selectedSender === 'all') return [];
+    
+    return messages
+      .filter(m => {
+        const matchesSearch = !searchTerm || m.content.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesSender = selectedSender === 'all' || m.sender === selectedSender;
+        return matchesSearch && matchesSender;
+      })
+      .slice(-100); // Only show last 100 matches for performance
+  }, [messages, searchTerm, selectedSender]);
 
   const formatName = (name: string) => {
     if (!name) return "Unknown";
+    const lowerName = name.toLowerCase();
+    if (lowerName.includes('nullifiedgalaxy')) return "Null";
+    if (lowerName.includes('vanessa')) return "Yun";
     const cleanName = name.split(/_|(?=[A-Z])/)[0];
     return cleanName.charAt(0).toUpperCase() + cleanName.slice(1);
   };
-
-  const results = useMemo(() => {
-    if (!searchTerm || searchTerm.length < 3) return [];
-    const lowerTerm = searchTerm.toLowerCase();
-    const indices = [];
-    for (let i = 0; i < messages.length; i++) {
-      if (messages[i].content?.toLowerCase().includes(lowerTerm)) {
-        indices.push(i);
-        if (indices.length >= 30) break; 
-      }
-    }
-    return indices;
-  }, [searchTerm, messages]);
 
   return (
     <motion.div 
@@ -36,77 +39,92 @@ export function ExploreSection({ messages, participants }: ExploreSectionProps) 
       initial="hidden" 
       whileInView="show" 
       viewport={{ once: true, margin: "-100px" }}
-      variants={{ hidden: { opacity: 0, y: 30 }, show: { opacity: 1, y: 0 } }}
-      className="max-w-4xl mx-auto pt-20"
+      variants={{ hidden: { opacity: 0 }, show: { opacity: 1 } }}
+      className="max-w-5xl mx-auto space-y-16 py-20"
     >
-      <div className="text-center mb-16">
-        <h2 className="text-5xl font-black text-gray-900 mb-4">Search & Explore</h2>
-        <p className="text-xl text-gray-500">Find specific memories, jokes, or moments.</p>
+      <div className="text-center space-y-4">
+        <div className="inline-flex items-center justify-center p-4 bg-gray-900/40 rounded-full mb-4 shadow-sm border border-indigo-900/20">
+          <Search className="w-8 h-8 text-indigo-400" />
+        </div>
+        <h2 className="text-5xl font-black text-gray-100">Explore Memories</h2>
+        <p className="text-xl text-indigo-400 italic">Search through our history to find specific moments.</p>
       </div>
 
-      <div className="bg-white/60 backdrop-blur-3xl rounded-[3rem] shadow-2xl border border-white/80 overflow-hidden p-8 md:p-12">
-        <div className="relative mb-10">
-          <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-6 h-6 text-gray-400" />
-          <input 
-            type="text" 
-            placeholder="Search for a memory, word, or phrase..." 
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-16 pr-6 py-5 bg-white/80 border-2 border-white/60 rounded-3xl focus:outline-none focus:ring-4 focus:ring-teal-500/20 focus:border-teal-500 transition-all text-xl font-medium placeholder:text-gray-400 shadow-inner"
-          />
+      <div className="bg-gray-900/40 backdrop-blur-3xl p-8 rounded-[3rem] shadow-xl border border-gray-800 space-y-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="relative group">
+            <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-indigo-400 transition-colors" size={20} />
+            <input 
+              type="text" 
+              placeholder="Search for words or phrases..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-14 pr-6 py-4 bg-gray-950/50 border border-gray-800 rounded-2xl text-gray-100 placeholder-gray-600 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-medium"
+            />
+          </div>
+          
+          <div className="flex space-x-2">
+            <button 
+              onClick={() => setSelectedSender('all')}
+              className={`flex-1 px-4 py-4 rounded-2xl font-bold transition-all border ${
+                selectedSender === 'all' 
+                  ? 'bg-indigo-600 text-white border-transparent shadow-lg shadow-indigo-500/20' 
+                  : 'bg-gray-950/50 text-gray-400 border-gray-800 hover:bg-gray-800'
+              }`}
+            >
+              All
+            </button>
+            {participants.map(p => (
+              <button 
+                key={p}
+                onClick={() => setSelectedSender(p)}
+                className={`flex-1 px-4 py-4 rounded-2xl font-bold transition-all border ${
+                  selectedSender === p 
+                    ? 'bg-indigo-600 text-white border-transparent shadow-lg shadow-indigo-500/20' 
+                    : 'bg-gray-950/50 text-gray-400 border-gray-800 hover:bg-gray-800'
+                }`}
+              >
+                {formatName(p)}
+              </button>
+            ))}
+          </div>
         </div>
 
-        <div className="space-y-8 max-h-[600px] overflow-y-auto pr-4 custom-scrollbar">
-          {searchTerm.length >= 3 && results.length === 0 && (
-            <div className="text-center text-gray-500 py-12 text-lg font-medium">
-              No messages found matching "{searchTerm}"
-            </div>
-          )}
-          {searchTerm.length < 3 && (
-            <div className="text-center text-gray-400 py-12 text-lg">
-              Type at least 3 characters to start searching.
-            </div>
-          )}
-          
-          {results.map((index) => {
-            const msg = messages[index];
-            const context = messages.slice(Math.max(0, index - 2), Math.min(messages.length, index + 3));
-
-            return (
-              <div key={index} className="bg-white/80 backdrop-blur-md p-8 rounded-[2.5rem] border border-white/60 space-y-6 shadow-sm hover:shadow-md transition-all">
-                <div className="text-[10px] text-gray-400 font-black tracking-[0.2em] uppercase text-center mb-2">
-                  {new Date(msg.timestamp).toLocaleString(undefined, { dateStyle: 'long', timeStyle: 'short' })}
-                </div>
-                
-                <div className="space-y-4">
-                  {context.map((m, i) => {
-                    const isMatch = m === msg;
-                    const isP1 = m.sender === participants[0];
-                    
-                    return (
-                      <div key={i} className={`flex flex-col ${isP1 ? 'items-start' : 'items-end'} ${!isMatch ? 'opacity-40 scale-[0.98]' : ''} transition-all`}>
-                        <div className={`text-[10px] text-gray-500 mb-1 ${isP1 ? 'ml-3' : 'mr-3'} font-bold uppercase tracking-wider`}>
-                          {formatName(m.sender)}
-                        </div>
-                        <div className={`px-6 py-3 rounded-[1.5rem] text-base max-w-[85%] font-medium shadow-sm border border-white/50 ${
-                          isMatch 
-                            ? (isP1 ? 'bg-teal-100 text-teal-900 border-teal-200' : 'bg-blue-100 text-blue-900 border-blue-200 shadow-indigo-100')
-                            : 'bg-gray-100/50 text-gray-600'
-                        }`}>
-                          {isMatch ? (
-                            m.content?.split(new RegExp(`(${searchTerm})`, 'gi')).map((part, j) => 
-                              part.toLowerCase() === searchTerm.toLowerCase() ? 
-                                <span key={j} className="bg-yellow-300/80 font-black rounded px-1 -mx-1">{part}</span> : part
-                            )
-                          ) : m.content}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+        <div className="space-y-4 max-h-[600px] overflow-y-auto custom-scrollbar pr-2">
+          <AnimatePresence mode="popLayout">
+            {filteredMessages.length > 0 ? (
+              filteredMessages.map((msg, i) => (
+                <motion.div 
+                  key={`${msg.timestamp}-${i}`}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 10 }}
+                  className="p-6 bg-gray-950/30 border border-gray-800/50 rounded-2xl flex flex-col space-y-2 hover:bg-gray-800/30 transition-colors"
+                >
+                  <div className="flex items-center justify-between text-xs font-black uppercase tracking-widest">
+                    <span className="text-indigo-400 flex items-center space-x-1">
+                      <User size={12} />
+                      <span>{formatName(msg.sender)}</span>
+                    </span>
+                    <span className="text-gray-600 flex items-center space-x-1">
+                      <Calendar size={12} />
+                      <span>{new Date(msg.timestamp).toLocaleDateString()}</span>
+                    </span>
+                  </div>
+                  <p className="text-gray-300 font-medium leading-relaxed">{msg.content}</p>
+                </motion.div>
+              ))
+            ) : searchTerm || selectedSender !== 'all' ? (
+              <div className="py-20 text-center text-gray-600 font-medium">
+                No messages found matching your search.
               </div>
-            );
-          })}
+            ) : (
+              <div className="py-20 text-center space-y-4">
+                <MessageCircle className="w-12 h-12 text-gray-800 mx-auto" />
+                <p className="text-gray-600 font-medium">Type something above to search our memories.</p>
+              </div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
     </motion.div>

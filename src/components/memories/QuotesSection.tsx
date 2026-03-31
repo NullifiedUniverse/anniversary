@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Quote, TrendingUp, Loader2 } from 'lucide-react';
+import { Quote, TrendingUp, Loader2, Heart } from 'lucide-react';
 import { useInView } from 'react-intersection-observer';
 
 interface QuotesSectionProps {
@@ -32,17 +32,9 @@ export function QuotesSection({
   const { ref: insightsRef, inView: insightsInView } = useInView({ threshold: 0.1 });
   const { ref: jokesRef, inView: jokesInView } = useInView({ threshold: 0.1 });
 
-  useEffect(() => {
-    if (quotesInView) onLoadMoreQuotes();
-  }, [quotesInView]);
-
-  useEffect(() => {
-    if (insightsInView) onLoadMoreInsights();
-  }, [insightsInView]);
-
-  useEffect(() => {
-    if (jokesInView) onLoadMoreJokes();
-  }, [jokesInView]);
+  useEffect(() => { if (quotesInView) onLoadMoreQuotes(); }, [quotesInView]);
+  useEffect(() => { if (insightsInView) onLoadMoreInsights(); }, [insightsInView]);
+  useEffect(() => { if (jokesInView) onLoadMoreJokes(); }, [jokesInView]);
 
   const formatName = (name: string) => {
     if (!name) return "Unknown";
@@ -54,21 +46,18 @@ export function QuotesSection({
   };
 
   return (
-    <motion.div 
-      id="moments" 
-      initial="hidden" 
-      whileInView="show" 
-      viewport={{ once: true, margin: "-100px" }}
-      variants={{ hidden: { opacity: 0 }, show: { opacity: 1 } }}
-      className="max-w-5xl mx-auto space-y-32 pt-20"
-    >
-      {/* Memorable Quotes */}
+    <div id="moments" className="max-w-[1400px] mx-auto space-y-64 px-4 pb-20">
+      {/* Cinematic Quotes */}
       <section>
-        <div className="text-center mb-16">
-          <h2 className="text-5xl font-black text-gray-900 mb-4">Our Echoes</h2>
-          <p className="text-xl text-pink-500 italic">The words that linger in our hearts.</p>
+        <div className="text-center mb-32 space-y-6">
+          <motion.div initial={{ scale: 0 }} whileInView={{ scale: 1 }} className="inline-flex items-center justify-center p-5 bg-indigo-500/10 rounded-3xl mb-6 border border-indigo-500/20 shadow-2xl">
+            <Quote className="w-10 h-10 text-indigo-400" />
+          </motion.div>
+          <h2 className="text-7xl font-black text-white tracking-tighter">Our Echoes</h2>
+          <p className="text-2xl text-indigo-400 font-medium italic">Words that whisper through time.</p>
         </div>
-        <div className="space-y-16">
+        
+        <div className="space-y-32">
           {quotes.map((quote, index) => {
             const isP1 = quote.sender === participants[0];
             const words = quote.text.split(' ');
@@ -76,110 +65,107 @@ export function QuotesSection({
             return (
               <motion.div 
                 key={index} 
-                initial="hidden" whileInView="show" viewport={{ once: true, margin: "-100px" }}
-                variants={{ hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.04 } } }}
-                className={`flex flex-col ${isP1 ? 'items-start' : 'items-end'} w-full group`}
+                initial={{ opacity: 0, y: 60 }} 
+                whileInView={{ opacity: 1, y: 0 }} 
+                viewport={{ once: true, margin: "-100px" }}
+                transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
+                className={`flex flex-col ${isP1 ? 'items-start' : 'items-end'} w-full relative`}
               >
-                <motion.div 
-                  variants={{ hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 } }} 
-                  className="text-sm text-gray-500 mb-3 px-5 py-1.5 font-bold uppercase tracking-widest bg-white/60 backdrop-blur-md rounded-full border border-white/80 shadow-sm inline-block"
-                >
-                  {quote.context}
-                </motion.div>
-                <div className={`max-w-[95%] md:max-w-[80%] p-8 md:p-12 rounded-[3rem] shadow-2xl relative transition-all duration-500 hover:scale-[1.03] hover:shadow-[0_10px_50px_rgba(168,85,247,0.3)] cursor-default ${
+                <div className={`max-w-[90%] lg:max-w-[70%] p-16 md:p-24 rounded-[5rem] shadow-[0_40px_100px_rgba(0,0,0,0.4)] relative overflow-hidden transition-all duration-700 hover:scale-[1.02] border border-white/5 ${
                   isP1 
-                    ? 'bg-gradient-to-br from-purple-600/90 to-indigo-600/90 backdrop-blur-xl text-white rounded-tl-xl border border-purple-400/30' 
-                    : 'bg-gradient-to-bl from-pink-500/90 to-orange-500/90 backdrop-blur-xl text-white rounded-tr-xl border border-pink-400/30'
+                    ? 'bg-gradient-to-br from-indigo-950/80 to-slate-900/80 rounded-tl-xl' 
+                    : 'bg-gradient-to-bl from-pink-950/80 to-slate-900/80 rounded-tr-xl'
                 }`}>
-                  <motion.div 
-                    animate={{ y: [-3, 3, -3], rotate: [-3, 3, -3] }} 
-                    transition={{ repeat: Infinity, duration: 5, ease: "easeInOut" }}
-                    className="absolute top-6 left-6 md:top-8 md:left-8 opacity-20"
-                  >
-                    <Quote className="w-12 h-12 md:w-16 md:h-16 text-white rotate-180" />
-                  </motion.div>
+                  <div className="absolute top-0 left-0 w-full h-full bg-white/[0.02] pointer-events-none" />
+                  <Quote className={`absolute top-12 ${isP1 ? 'left-12' : 'right-12'} w-24 h-24 text-white/5 ${isP1 ? 'rotate-180' : ''}`} />
                   
-                  <p className="text-2xl md:text-3xl lg:text-4xl font-serif italic leading-relaxed md:leading-snug relative z-10 pl-10 md:pl-16 pr-4 py-4 flex flex-wrap gap-[0.25em] drop-shadow-sm">
-                    {words.map((word, i) => (
-                      <motion.span 
-                        key={i} 
-                        variants={{ hidden: { opacity: 0, y: 15, filter: 'blur(4px)' }, show: { opacity: 1, y: 0, filter: 'blur(0px)', transition: { duration: 0.5, ease: "easeOut" } } }}
-                      >
-                        {word}
-                      </motion.span>
-                    ))}
+                  <p className="text-3xl md:text-5xl lg:text-6xl font-serif italic leading-tight text-white relative z-10 drop-shadow-2xl">
+                    {quote.text}
                   </p>
-                  <motion.div 
-                    variants={{ hidden: { opacity: 0, x: 50 }, show: { opacity: 1, x: 0, transition: { type: "spring", stiffness: 50, damping: 12, delay: words.length * 0.04 + 0.3 } } }} 
-                    className="mt-8 text-right flex items-center justify-end space-x-3"
-                  >
-                    <div className="h-[2px] w-8 md:w-12 bg-white/50 rounded-full" />
-                    <span className="text-xl md:text-2xl font-black text-white/90 tracking-wide">
+                  
+                  <div className={`mt-16 flex items-center space-x-6 ${isP1 ? 'justify-start' : 'justify-end'} relative z-10`}>
+                    <div className="h-px w-16 bg-white/20" />
+                    <span className="text-2xl font-black text-gray-400 tracking-[0.2em] uppercase">
                       {formatName(quote.sender)}
                     </span>
-                  </motion.div>
+                  </div>
+                  
+                  <div className="mt-4 text-xs font-black uppercase tracking-[0.4em] text-gray-600 opacity-50">
+                    {quote.context}
+                  </div>
                 </div>
               </motion.div>
             );
           })}
           
-          <div ref={quotesRef} className="flex justify-center py-12">
-            {loadingQuotes && <Loader2 className="w-8 h-8 text-purple-500 animate-spin" />}
+          <div ref={quotesRef} className="flex justify-center py-24">
+            {loadingQuotes && <Loader2 className="w-10 h-10 text-indigo-500 animate-spin" />}
           </div>
         </div>
       </section>
 
-      {/* Communication Insights */}
+      {/* Connection Insights */}
       <section>
-        <div className="text-center mb-16">
-          <h2 className="text-5xl font-black text-gray-900 mb-4">Our Connection</h2>
-          <p className="text-xl text-pink-500 italic">How we connect on a deeper level.</p>
+        <div className="text-center mb-32 space-y-6">
+          <motion.div initial={{ scale: 0 }} whileInView={{ scale: 1 }} className="inline-flex items-center justify-center p-5 bg-amber-500/10 rounded-3xl mb-6 border border-amber-500/20 shadow-2xl">
+            <TrendingUp className="w-10 h-10 text-amber-400" />
+          </motion.div>
+          <h2 className="text-7xl font-black text-white tracking-tighter">Our Pulse</h2>
+          <p className="text-2xl text-amber-400 font-medium italic">How our frequencies align.</p>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {insights.map((insight, index) => (
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+          {insights.map((insight, i) => (
             <motion.div 
-              key={index} 
-              variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } }}
-              whileHover={{ y: -8, scale: 1.02 }}
-              className="bg-white/60 backdrop-blur-3xl p-10 rounded-[2.5rem] shadow-xl border border-white/80 group transition-all"
+              key={i} 
+              initial={{ opacity: 0, scale: 0.95 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              whileHover={{ y: -12, scale: 1.02 }}
+              className="bg-white/5 backdrop-blur-3xl p-16 rounded-[4rem] border border-white/10 group transition-all duration-700"
             >
-              <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                <TrendingUp className="w-6 h-6 text-indigo-500" />
+              <div className="w-16 h-16 bg-amber-500/10 rounded-3xl flex items-center justify-center mb-8 group-hover:bg-amber-500 group-hover:text-white transition-all">
+                <TrendingUp className="w-8 h-8 text-amber-400 group-hover:text-white" />
               </div>
-              <h4 className="text-2xl font-black text-gray-900 mb-4 group-hover:text-indigo-500 transition-colors">{insight.title}</h4>
-              <p className="text-lg text-gray-600 leading-relaxed font-medium">{insight.description}</p>
+              <h4 className="text-4xl font-black text-white mb-6 group-hover:text-amber-300 transition-colors tracking-tight">{insight.title}</h4>
+              <p className="text-xl text-gray-400 leading-relaxed font-medium">{insight.description}</p>
             </motion.div>
           ))}
         </div>
-        <div ref={insightsRef} className="flex justify-center py-12">
-          {loadingInsights && <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />}
+        <div ref={insightsRef} className="flex justify-center py-24">
+          {loadingInsights && <Loader2 className="w-10 h-10 text-amber-500 animate-spin" />}
         </div>
       </section>
 
-      {/* Inside Jokes */}
+      {/* Shared Smiles */}
       <section>
-        <div className="text-center mb-16">
-          <h2 className="text-5xl font-black text-gray-900 mb-4">Shared Smiles</h2>
-          <p className="text-xl text-pink-500 italic">Things only the two of you understand.</p>
+        <div className="text-center mb-32 space-y-6">
+          <motion.div initial={{ scale: 0 }} whileInView={{ scale: 1 }} className="inline-flex items-center justify-center p-5 bg-pink-500/10 rounded-3xl mb-6 border border-pink-500/20 shadow-2xl">
+            <span className="text-5xl">🤭</span>
+          </motion.div>
+          <h2 className="text-7xl font-black text-white tracking-tighter">Hidden Languages</h2>
+          <p className="text-2xl text-pink-400 font-medium italic">The jokes only we know the punchlines to.</p>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {jokes.map((joke, index) => (
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {jokes.map((joke, i) => (
             <motion.div 
-              key={index}
-              variants={{ hidden: { opacity: 0, scale: 0.9 }, show: { opacity: 1, scale: 1 } }}
-              whileHover={{ y: -8, scale: 1.02 }}
-              className="bg-white/60 backdrop-blur-3xl p-10 rounded-[2.5rem] shadow-xl border border-white/80 group transition-all"
+              key={i}
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              whileHover={{ y: -8 }}
+              className="bg-white/5 backdrop-blur-2xl p-12 rounded-[3rem] border border-white/5 shadow-2xl group transition-all duration-500"
             >
-              <div className="text-4xl mb-6">🤭</div>
-              <h4 className="text-2xl font-black text-gray-900 mb-4 group-hover:text-purple-500 transition-colors">"{joke.joke}"</h4>
-              <p className="text-lg text-gray-600 leading-relaxed font-medium">Origin: {joke.origin}</p>
+              <div className="text-5xl mb-8 group-hover:scale-125 transition-transform duration-500">🤭</div>
+              <h4 className="text-3xl font-black text-white mb-6 group-hover:text-pink-300 transition-colors leading-snug italic">"{joke.joke}"</h4>
+              <div className="h-px w-12 bg-white/10 mb-6" />
+              <p className="text-sm font-black uppercase tracking-[0.2em] text-gray-500">Origin: {joke.origin}</p>
             </motion.div>
           ))}
         </div>
-        <div ref={jokesRef} className="flex justify-center py-12">
-          {loadingJokes && <Loader2 className="w-8 h-8 text-purple-500 animate-spin" />}
+        <div ref={jokesRef} className="flex justify-center py-24">
+          {loadingJokes && <Loader2 className="w-10 h-10 text-pink-500 animate-spin" />}
         </div>
       </section>
-    </motion.div>
+    </div>
   );
 }

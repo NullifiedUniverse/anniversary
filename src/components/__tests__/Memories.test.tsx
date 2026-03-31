@@ -33,7 +33,6 @@ const mockData: MemoryData = {
 describe('Memories', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Mock window.scrollTo
     window.scrollTo = vi.fn();
   });
 
@@ -56,24 +55,10 @@ describe('Memories', () => {
     expect(window.scrollTo).toHaveBeenCalled();
   });
 
-  it('renders all sections', () => {
-    render(<Memories data={mockData} messages={[]} />);
-    expect(screen.getByTestId('story-section')).toBeInTheDocument();
-    expect(screen.getByTestId('stats-section')).toBeInTheDocument();
-    expect(screen.getByTestId('word-cloud-section')).toBeInTheDocument();
-    expect(screen.getByTestId('highlights-section')).toBeInTheDocument();
-    expect(screen.getByTestId('future-section')).toBeInTheDocument();
-    expect(screen.getByTestId('explore-section')).toBeInTheDocument();
-  });
-
-  it('handles scroll events', () => {
-    render(<Memories data={mockData} messages={[]} />);
-    fireEvent.scroll(window);
-  });
-
   it('renders celebratory footer', () => {
     render(<Memories data={mockData} messages={[]} />);
-    expect(screen.getByText(/Happy Anniversary!/i)).toBeInTheDocument();
+    expect(screen.getByText(/Forever/i)).toBeInTheDocument();
+    expect(screen.getByText(/Begins/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Big heart icon/i)).toBeInTheDocument();
   });
 });

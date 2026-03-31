@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { MemoryData, generateMoreItems } from '../../lib/gemini';
 import { ChatMessage } from '../../lib/parser';
 
@@ -26,12 +26,32 @@ export function useInfiniteMemories(
     superlatives: false,
   });
 
-  const generateMore = async (category: keyof typeof loading) => {
-    if (loading[category] || messages.length === 0) return;
+  // Sequential queue management
+  const queue = useRef<string[]>([]);
+  const isProcessing = useRef(false);
+  const lastRequestTime = useRef(0);
+
+  const processQueue = async () => {
+    if (isProcessing.current || queue.current.length === 0) return;
+
+    isProcessing.current = true;
+    
+    // Ensure at least 1.5s between requests to avoid 429s
+    const now = Date.now();
+    const timeSinceLast = now - lastRequestTime.current;
+    if (timeSinceLast < 1500) {
+      await new Promise(r => setTimeout(r, 1500 - timeSinceLast));
+    }
+
+    const category = queue.current.shift() as keyof typeof loading;
+    if (!category) {
+      isProcessing.current = false;
+      return;
+    }
 
     setLoading(prev => ({ ...prev, [category]: true }));
+    
     try {
-      const categoryKey = String(category);
       const categoryMap: Record<string, any> = {
         quotes: { key: 'memorableQuotes', state: quotes, setter: setQuotes },
         insights: { key: 'communicationInsights', state: insights, setter: setInsights },
@@ -42,17 +62,31 @@ export function useInfiniteMemories(
         superlatives: { key: 'superlatives', state: superlatives, setter: setSuperlatives },
       };
 
-      const config = categoryMap[categoryKey];
-      if (!config) return;
-
-      const { key, state, setter } = config;
-      const newItems = await generateMoreItems(messages, key, state, customApiKey, selectedModel);
-      setter((prev: any[]) => [...prev, ...newItems]);
+      const config = categoryMap[category];
+      if (config) {
+        const { key, state, setter } = config;
+        const newItems = await generateMoreItems(messages, key, state, customApiKey || '', selectedModel);
+        if (Array.isArray(newItems) && newItems.length > 0) {
+          setter((prev: any[]) => [...prev, ...newItems]);
+        }
+      }
     } catch (error) {
       console.error(`Error generating more ${String(category)}:`, error);
     } finally {
+      lastRequestTime.current = Date.now();
       setLoading(prev => ({ ...prev, [category]: false }));
+      isProcessing.current = false;
+      // Process next in queue
+      setTimeout(processQueue, 100);
     }
+  };
+
+  const generateMore = (category: keyof typeof loading) => {
+    // Don't add to queue if already loading or already in queue
+    if (loading[category] || queue.current.includes(String(category)) || messages.length === 0) return;
+
+    queue.current.push(String(category));
+    processQueue();
   };
 
   return {

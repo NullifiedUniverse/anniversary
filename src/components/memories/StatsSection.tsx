@@ -1,42 +1,42 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Heart, TrendingUp, Star, BarChart3, Clock } from 'lucide-react';
-import { BarChart, Bar, XAxis, Tooltip as RechartsTooltip, ResponsiveContainer, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, Tooltip as RechartsTooltip, ResponsiveContainer, Cell, AreaChart, Area, YAxis } from 'recharts';
 import { MemoryData } from '../../lib/gemini';
 
 interface StatsSectionProps {
   data: MemoryData;
 }
 
-function StatCard({ icon, title, value, tooltip }: { icon: React.ReactNode, title: string, value: string | number, tooltip: string }) {
+function StatCard({ icon, title, value, tooltip, delay = 0 }: { icon: React.ReactNode, title: string, value: string | number, tooltip: string, delay?: number }) {
   const [isHovered, setIsHovered] = useState(false);
 
   return (
     <motion.div 
-      variants={{
-        hidden: { opacity: 0, y: 20 },
-        show: { opacity: 1, y: 0, transition: { type: "spring" } }
-      }}
-      className="relative bg-white/40 backdrop-blur-2xl p-10 rounded-[3rem] shadow-sm border border-pink-100/50 flex flex-col items-center justify-center text-center group"
+      initial={{ opacity: 0, y: 30 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ delay, duration: 0.8 }}
+      className="relative bg-white/5 backdrop-blur-3xl p-12 rounded-[4rem] border border-white/10 flex flex-col items-center justify-center text-center group hover:bg-white/[0.08] transition-colors duration-500 shadow-2xl"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <div className="mb-6 p-5 bg-white/60 rounded-full group-hover:scale-110 transition-transform duration-300 shadow-sm border border-white/50">
+      <div className="mb-8 p-6 bg-white/5 rounded-full group-hover:scale-110 group-hover:bg-white/10 transition-all duration-500 shadow-xl">
         {icon}
       </div>
-      <h4 className="text-lg text-pink-400 font-bold uppercase tracking-wider mb-2">{title}</h4>
-      <p className="text-5xl font-black text-gray-800">{value}</p>
+      <h4 className="text-xs text-gray-500 font-black uppercase tracking-[0.3em] mb-4">{title}</h4>
+      <p className="text-6xl font-black text-white tracking-tighter">{value}</p>
 
       <AnimatePresence>
         {isHovered && (
           <motion.div 
-            initial={{ opacity: 0, y: 10, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 10, scale: 0.95 }}
-            className="absolute -bottom-20 left-1/2 -translate-x-1/2 w-72 bg-gray-800/90 backdrop-blur-md text-white text-sm font-medium p-4 rounded-2xl shadow-xl z-20 pointer-events-none"
+            initial={{ opacity: 0, scale: 0.9, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9, y: 10 }}
+            className="absolute -top-24 left-1/2 -translate-x-1/2 w-64 bg-white text-black text-xs font-bold p-5 rounded-3xl shadow-[0_20px_50px_rgba(255,255,255,0.2)] z-20 pointer-events-none"
           >
             {tooltip}
-            <div className="absolute -top-2 left-1/2 -translate-x-1/2 border-8 border-transparent border-b-gray-800/90" />
+            <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 border-8 border-transparent border-t-white" />
           </motion.div>
         )}
       </AnimatePresence>
@@ -55,105 +55,98 @@ export function StatsSection({ data }: StatsSectionProps) {
   };
 
   const chartData = Array.from({ length: 24 }).map((_, i) => ({
-    hour: i === 0 ? '12 AM' : i < 12 ? `${i} AM` : i === 12 ? '12 PM' : `${i - 12} PM`,
+    hour: i,
+    label: i === 0 ? '12 AM' : i < 12 ? `${i} AM` : i === 12 ? '12 PM' : `${i - 12} PM`,
     count: data.extendedStats.messagesByHour[i] || 0
   }));
 
   return (
-    <motion.div 
-      id="stats"
-      initial="hidden" 
-      whileInView="show" 
-      viewport={{ once: true, margin: "-100px" }}
-      variants={{
-        hidden: { opacity: 0 },
-        show: { opacity: 1, transition: { staggerChildren: 0.1 } }
-      }}
-      className="space-y-16 max-w-5xl mx-auto pt-20"
-    >
-      <div className="text-center mb-16 space-y-4">
-        <h2 className="text-5xl font-black text-gray-900">Our Rhythm</h2>
-        <p className="text-xl text-pink-500 italic">The heartbeat of our connection, told through the rhythm of our words.</p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        <StatCard 
-          icon={<Heart className="w-8 h-8 text-pink-500 fill-pink-500" />} 
-          title="Shared Words" 
-          value={data.stats.totalMessages.toLocaleString()} 
-          tooltip="Every single message is a piece of our story together." 
-        />
-        <StatCard 
-          icon={<TrendingUp className="w-8 h-8 text-purple-500" />} 
-          title="Always There" 
-          value={formatName(data.stats.mostActivePerson)} 
-          tooltip="The one who keeps the conversation blooming." 
-        />
-        <StatCard 
-          icon={<Star className="w-8 h-8 text-yellow-500 fill-yellow-500" />} 
-          title="Our Language" 
-          value={data.stats.topEmojis.join(" ")} 
-          tooltip="The little symbols that carry our biggest feelings." 
-        />
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <motion.div 
-          variants={{ hidden: { opacity: 0, x: -20 }, show: { opacity: 1, x: 0 } }}
-          className="bg-white/40 backdrop-blur-2xl rounded-[3rem] p-10 shadow-sm border border-pink-100/50"
+    <div id="stats" className="space-y-32 max-w-[1400px] mx-auto pt-20 px-4">
+      <div className="text-center space-y-6">
+        <motion.h2 
+          initial={{ opacity: 0, scale: 0.9 }}
+          whileInView={{ opacity: 1, scale: 1 }}
+          className="text-7xl font-black text-white tracking-tighter"
         >
-          <div className="flex items-center space-x-4 mb-10">
-            <BarChart3 className="w-8 h-8 text-pink-400" />
-            <h3 className="text-3xl font-bold text-gray-900">Our Daily Flow</h3>
+          Our Rhythm
+        </motion.h2>
+        <motion.p 
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          transition={{ delay: 0.2 }}
+          className="text-2xl text-gray-500 font-medium italic tracking-wide"
+        >
+          The heartbeat of our connection, mapped through time.
+        </motion.p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+        <StatCard icon={<Heart className="w-10 h-10 text-pink-500 fill-pink-500" />} title="Total Words" value={data.stats.totalMessages.toLocaleString()} tooltip="Every message is a page in our book." delay={0.1} />
+        <StatCard icon={<TrendingUp className="w-10 h-10 text-indigo-400" />} title="Energy Maker" value={formatName(data.stats.mostActivePerson)} tooltip="The one who lights up the screen." delay={0.2} />
+        <StatCard icon={<Star className="w-10 h-10 text-amber-400 fill-amber-400" />} title="Our Code" value={data.stats.topEmojis.slice(0, 3).join(" ") || "❤️✨"} tooltip="The symbols that say everything." delay={0.3} />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-12">
+        {/* Main large chart */}
+        <motion.div 
+          initial={{ opacity: 0, x: -40 }}
+          whileInView={{ opacity: 1, x: 0 }}
+          className="lg:col-span-3 bg-white/5 backdrop-blur-3xl rounded-[4rem] p-16 border border-white/10 shadow-2xl relative overflow-hidden group"
+        >
+          <div className="absolute top-0 right-0 w-full h-full bg-gradient-to-br from-indigo-500/5 to-transparent pointer-events-none" />
+          <div className="flex items-center space-x-6 mb-16 relative z-10">
+            <div className="p-4 bg-indigo-500/10 rounded-3xl"><BarChart3 className="w-10 h-10 text-indigo-400" /></div>
+            <h3 className="text-4xl font-black text-white tracking-tight">The Daily Flow</h3>
           </div>
-          <div className="h-64 mt-4">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData}>
-                <XAxis dataKey="hour" hide />
-                <RechartsTooltip 
-                  cursor={{ fill: 'rgba(255, 133, 161, 0.1)' }}
-                  contentStyle={{ borderRadius: '24px', border: 'none', boxShadow: '0 10px 30px rgba(255, 133, 161, 0.1)', background: 'rgba(255, 255, 255, 0.9)' }}
-                />
-                <Bar dataKey="count" radius={[10, 10, 0, 0]}>
-                  {chartData.map((_, index) => (
-                    <Cell key={`cell-${index}`} fill="url(#romanticGradient)" />
-                  ))}
-                </Bar>
+          
+          <div className="h-[400px] w-full relative z-10">
+            <ResponsiveContainer width="100%" height="100%" debounce={50}>
+              <AreaChart data={chartData}>
                 <defs>
-                  <linearGradient id="romanticGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#ff85a1" stopOpacity={0.9} />
-                    <stop offset="100%" stopColor="#a185ff" stopOpacity={0.9} />
+                  <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
-              </BarChart>
+                <XAxis dataKey="label" hide />
+                <RechartsTooltip 
+                  cursor={{ stroke: '#6366f1', strokeWidth: 2 }}
+                  contentStyle={{ borderRadius: '32px', border: 'none', background: 'rgba(0,0,0,0.8)', color: '#fff', padding: '20px' }}
+                />
+                <Area type="monotone" dataKey="count" stroke="#6366f1" strokeWidth={4} fillOpacity={1} fill="url(#areaGradient)" />
+              </AreaChart>
             </ResponsiveContainer>
           </div>
-          <div className="flex justify-between text-xs text-pink-300 mt-6 font-bold uppercase tracking-widest px-2">
-            <span>Midnight</span><span>Dawn</span><span>Noon</span><span>Dusk</span><span>Night</span>
+          
+          <div className="flex justify-between text-[10px] text-gray-600 mt-12 font-black uppercase tracking-[0.4em] relative z-10 px-4">
+            <span>Midnight</span><span>Morning</span><span>Afternoon</span><span>Evening</span><span>Night</span>
           </div>
         </motion.div>
 
+        {/* Side stats */}
         <motion.div 
-          variants={{ hidden: { opacity: 0, x: 20 }, show: { opacity: 1, x: 0 } }}
-          className="bg-white/40 backdrop-blur-2xl rounded-[3rem] p-10 shadow-sm border border-pink-100/50 flex flex-col justify-center"
+          initial={{ opacity: 0, x: 40 }}
+          whileInView={{ opacity: 1, x: 0 }}
+          className="lg:col-span-2 bg-white/5 backdrop-blur-3xl rounded-[4rem] p-16 border border-white/10 shadow-2xl flex flex-col justify-center"
         >
-          <div className="flex items-center space-x-4 mb-10">
-            <Clock className="w-8 h-8 text-purple-400" />
-            <h3 className="text-3xl font-bold text-gray-900">Waiting for You</h3>
+          <div className="flex items-center space-x-6 mb-16">
+            <div className="p-4 bg-pink-500/10 rounded-3xl"><Clock className="w-10 h-10 text-pink-400" /></div>
+            <h3 className="text-4xl font-black text-white tracking-tight">Response Echo</h3>
           </div>
-          <div className="space-y-6">
-            {data.participants.map((p) => (
-              <div key={p} className="flex items-center justify-between p-6 bg-white/60 rounded-3xl border border-white/50 shadow-sm hover:shadow-md transition-shadow duration-300">
-                <span className="font-bold text-2xl text-gray-700">{formatName(p)}</span>
-                <div className="flex items-baseline space-x-2">
-                  <span className="text-5xl font-black text-pink-500">{data.extendedStats.avgResponseTime[p] || '< 1'}</span>
-                  <span className="text-pink-300 font-bold text-lg">mins</span>
+          
+          <div className="space-y-10">
+            {data.participants.map((p, i) => (
+              <div key={p} className="flex items-center justify-between p-10 bg-white/5 rounded-[3rem] border border-white/5 hover:bg-white/10 transition-all duration-500 group">
+                <span className="font-black text-3xl text-gray-300 group-hover:text-white transition-colors">{formatName(p)}</span>
+                <div className="flex items-baseline space-x-3">
+                  <span className="text-6xl font-black text-pink-500 drop-shadow-[0_0_20px_rgba(236,72,153,0.3)]">{data.extendedStats.avgResponseTime[p] || '< 1'}</span>
+                  <span className="text-gray-600 font-black text-xs uppercase tracking-widest">min</span>
                 </div>
               </div>
             ))}
           </div>
         </motion.div>
       </div>
-    </motion.div>
+    </div>
   );
 }

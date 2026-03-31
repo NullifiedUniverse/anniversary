@@ -21,9 +21,25 @@ export async function parseFiles(files: File[]): Promise<ChatMessage[]> {
   }
 
   // Sort by timestamp ascending
-  return allMessages
+  const sorted = allMessages
     .filter(msg => msg.content && msg.sender && !isNaN(msg.timestamp))
     .sort((a, b) => a.timestamp - b.timestamp);
+
+  // Deduplicate
+  const seen = new Set<string>();
+  const uniqueMessages: ChatMessage[] = [];
+
+  for (const msg of sorted) {
+    // Round timestamp to nearest second to handle minor variations between exports
+    const secondTs = Math.floor(msg.timestamp / 1000) * 1000;
+    const key = `${msg.sender}-${secondTs}-${msg.content}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      uniqueMessages.push(msg);
+    }
+  }
+
+  return uniqueMessages;
 }
 
 function decodeIGString(str: string): string {
@@ -89,8 +105,8 @@ function parseHtml(text: string): ChatMessage[] {
     if (messageBlocks.length > 0) {
       messageBlocks.forEach(block => {
         // Try to find sender, content, and timestamp within the block
-        const sender = block.querySelector('._3-96, ._2pio, ._2lek, ._2lel')?.textContent?.trim();
-        const content = block.querySelector('._3-96._2let, ._2let, div > div > div:nth-child(2)')?.textContent?.trim();
+        const sender = block.querySelector('h2, ._3-96, ._2pio, ._2lek, ._2lel')?.textContent?.trim();
+        const content = block.querySelector('._3-95._a6-p, ._3-96._2let, ._2let, div > div > div:nth-child(2)')?.textContent?.trim();
         const timestampStr = block.querySelector('._3-94, ._2lem, ._a3sc')?.textContent?.trim();
         
         if (sender && content && timestampStr) {

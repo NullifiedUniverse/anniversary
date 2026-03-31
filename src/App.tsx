@@ -1,13 +1,13 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { FileUpload } from './components/FileUpload';
 import { Memories } from './components/Memories';
-import { LoadingState } from './components/LoadingState';
+import { LoadingState, LoadingStep } from './components/LoadingState';
 import { parseFiles, ChatMessage } from './lib/parser';
 import { generateMemories, MemoryData } from './lib/gemini';
 import { motion, AnimatePresence, useScroll, useTransform, useSpring } from 'motion/react';
-import { Instagram, Sparkles, Heart } from 'lucide-react';
+import { Instagram, Sparkles, Heart, Key, CheckCircle2, AlertCircle } from 'lucide-react';
 
-type AppStatus = 'idle' | 'parsing' | 'generating' | 'success' | 'error';
+type AppStatus = 'setup' | 'idle' | 'analyzing' | 'success' | 'error';
 
 interface AppState {
   status: AppStatus;
@@ -16,18 +16,26 @@ interface AppState {
   error: string | null;
   customApiKey: string;
   selectedModel: string;
-  showAdvanced: boolean;
+  steps: LoadingStep[];
 }
 
+const INITIAL_STEPS: LoadingStep[] = [
+  { id: 'load', label: 'Preparing memory vault', status: 'pending' },
+  { id: 'parse', label: 'Processing 370k+ messages', status: 'pending' },
+  { id: 'sample', label: 'Weaving emotional context', status: 'pending' },
+  { id: 'ai', label: 'Gemini AI deep storytelling', status: 'pending' },
+  { id: 'render', label: 'Finalizing your journey', status: 'pending' },
+];
+
 const Particles = () => {
-  const particles = useMemo(() => Array.from({ length: 40 }).map(() => ({
-    width: Math.random() * 6 + 2,
+  const particles = useMemo(() => Array.from({ length: 50 }).map(() => ({
+    width: Math.random() * 4 + 1,
     left: Math.random() * 100,
     top: Math.random() * 100,
-    duration: Math.random() * 15 + 15,
-    delay: Math.random() * 5,
-    yOffset: -100 - Math.random() * 200,
-    xOffset: (Math.random() - 0.5) * 100
+    duration: Math.random() * 20 + 20,
+    delay: Math.random() * 10,
+    yOffset: -200 - Math.random() * 300,
+    xOffset: (Math.random() - 0.5) * 200
   })), []);
 
   return (
@@ -35,25 +43,10 @@ const Particles = () => {
       {particles.map((p, i) => (
         <motion.div
           key={i}
-          className="absolute rounded-full bg-pink-300/40 blur-[1px]"
-          style={{
-            width: p.width,
-            height: p.width,
-            left: `${p.left}%`,
-            top: `${p.top}%`,
-          }}
-          animate={{
-            y: [0, p.yOffset],
-            x: [0, p.xOffset],
-            opacity: [0, 0.6, 0],
-            scale: [0, 1, 0.5]
-          }}
-          transition={{
-            duration: p.duration,
-            repeat: Infinity,
-            ease: "easeInOut",
-            delay: p.delay
-          }}
+          className="absolute rounded-full bg-pink-500/10 blur-[2px]"
+          style={{ width: p.width, height: p.width, left: `${p.left}%`, top: `${p.top}%` }}
+          animate={{ y: [0, p.yOffset], x: [0, p.xOffset], opacity: [0, 0.3, 0], scale: [0, 1.5, 0.5] }}
+          transition={{ duration: p.duration, repeat: Infinity, ease: "linear", delay: p.delay }}
         />
       ))}
     </div>
@@ -62,54 +55,95 @@ const Particles = () => {
 
 export default function App() {
   const [state, setState] = useState<AppState>({
-    status: 'idle',
+    status: 'setup',
     memories: null,
     rawMessages: [],
     error: null,
-    customApiKey: '',
+    customApiKey: localStorage.getItem('insta_memories_key') || '',
     selectedModel: 'gemini-flash-latest',
-    showAdvanced: false,
+    steps: INITIAL_STEPS,
   });
 
   const { scrollYProgress } = useScroll();
-  const scaleX = useSpring(scrollYProgress, {
-    stiffness: 100,
-    damping: 30,
-    restDelta: 0.001
-  });
+  const scaleX = useSpring(scrollYProgress, { stiffness: 100, damping: 30, restDelta: 0.001 });
+  const bgColor = useTransform(scrollYProgress, [0, 0.5, 1], ['#020617', '#0f172a', '#1e1b4b']);
 
-  const y1 = useTransform(scrollYProgress, [0, 1], [0, 400]);
-  const y2 = useTransform(scrollYProgress, [0, 1], [0, -400]);
-  const y3 = useTransform(scrollYProgress, [0, 1], [0, 200]);
+  const updateStep = (id: string, status: LoadingStep['status']) => {
+    setState(prev => ({
+      ...prev,
+      steps: prev.steps.map(s => s.id === id ? { ...s, status } : s)
+    }));
+  };
 
-  const bgColor = useTransform(
-    scrollYProgress,
-    [0, 0.5, 1],
-    ['#FDFBF7', '#FDF2F8', '#EEF2FF']
-  );
+  const handleKeySubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmedKey = state.customApiKey.trim();
+    if (trimmedKey) {
+      localStorage.setItem('insta_memories_key', trimmedKey);
+      setState(prev => ({ ...prev, status: 'idle', customApiKey: trimmedKey }));
+    }
+  };
 
-  const handleFilesSelected = async (files: File[]) => {
+  const runAnalysis = async (messages: ChatMessage[], apiKey: string, modelName: string) => {
     try {
-      setState(prev => ({ ...prev, error: null, status: 'parsing' }));
+      console.log(`[App] 🚀 Initializing Analysis Flow...`);
+      setState(prev => ({ ...prev, status: 'analyzing', rawMessages: messages }));
       
-      const messages = await parseFiles(files);
+      updateStep('load', 'complete');
+      updateStep('parse', 'loading');
+      await new Promise(r => setTimeout(r, 1000));
+      updateStep('parse', 'complete');
       
-      if (messages.length === 0) {
-        throw new Error("Could not find any messages in the provided files. Please ensure they are valid Instagram export files.");
-      }
-
-      setState(prev => ({ ...prev, rawMessages: messages, status: 'generating' }));
+      updateStep('sample', 'loading');
+      await new Promise(r => setTimeout(r, 800));
+      updateStep('sample', 'complete');
       
-      const memoryData = await generateMemories(messages, state.customApiKey, state.selectedModel);
+      updateStep('ai', 'loading');
+      const memoryData = await generateMemories(messages, apiKey, modelName);
+      
+      updateStep('ai', 'complete');
+      updateStep('render', 'loading');
+      await new Promise(r => setTimeout(r, 1200));
+      updateStep('render', 'complete');
       
       setState(prev => ({ ...prev, memories: memoryData, status: 'success' }));
     } catch (err) {
-      console.error(err);
+      console.error("[App] ❌ Analysis Failure:", err);
       setState(prev => ({ 
         ...prev, 
-        error: err instanceof Error ? err.message : "An unknown error occurred", 
+        error: err instanceof Error ? err.message : "The vault encountered a problem.", 
         status: 'error' 
       }));
+    }
+  };
+
+  useEffect(() => {
+    if (state.status === 'idle') {
+      const loadPreParsed = async () => {
+        try {
+          const response = await fetch('/pre-parsed-data.json');
+          if (response.ok) {
+            const messages = await response.json();
+            if (messages?.length > 0) {
+              await runAnalysis(messages, state.customApiKey, state.selectedModel);
+            }
+          }
+        } catch (e) {
+          console.log("Auto-load skipped.");
+        }
+      };
+      loadPreParsed();
+    }
+  }, [state.status === 'idle']);
+
+  const handleFilesSelected = async (files: File[]) => {
+    try {
+      setState(prev => ({ ...prev, error: null, status: 'analyzing', steps: INITIAL_STEPS }));
+      const messages = await parseFiles(files);
+      if (messages.length === 0) throw new Error("No memories found in those files.");
+      runAnalysis(messages, state.customApiKey, state.selectedModel);
+    } catch (err) {
+      setState(prev => ({ ...prev, error: err instanceof Error ? err.message : "Processing failed", status: 'error' }));
     }
   };
 
@@ -120,205 +154,151 @@ export default function App() {
       memories: null,
       rawMessages: [],
       error: null,
+      steps: INITIAL_STEPS,
     }));
   };
 
   return (
-    <motion.div 
-      style={{ backgroundColor: bgColor }} 
-      className="min-h-screen text-gray-900 font-sans selection:bg-pink-200 overflow-x-hidden relative"
-    >
-      {/* Scroll Progress Bar */}
-      <motion.div 
-        className="fixed top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500 origin-left z-50" 
-        style={{ scaleX }} 
-      />
-
-      {/* Parallax Background Decorative Elements */}
-      <div className="fixed inset-0 pointer-events-none z-0">
-        <motion.div style={{ y: y1 }} className="absolute -top-[20%] -left-[10%] w-[70%] h-[70%] rounded-full bg-purple-300/20 blur-[160px]"></motion.div>
-        <motion.div style={{ y: y2 }} className="absolute top-[20%] -right-[10%] w-[60%] h-[80%] rounded-full bg-pink-300/20 blur-[160px]"></motion.div>
-        <motion.div style={{ y: y3 }} className="absolute -bottom-[20%] left-[10%] w-[70%] h-[60%] rounded-full bg-orange-200/30 blur-[160px]"></motion.div>
-      </div>
+    <motion.div style={{ backgroundColor: bgColor }} className="min-h-screen text-gray-100 font-sans selection:bg-pink-500/30 overflow-x-hidden relative">
+      <motion.div className="fixed top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 via-pink-500 to-amber-500 origin-left z-50" style={{ scaleX }} />
       <Particles />
 
-      <div className="relative z-10 container mx-auto px-4 py-8 min-h-screen flex flex-col">
-        {/* Header */}
-        <header className="flex items-center justify-between mb-16 px-4">
-          <motion.div 
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="flex items-center space-x-3 cursor-pointer group"
-            onClick={reset}
-          >
-            <div className="bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 p-2.5 rounded-2xl text-white shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-110">
-              <Instagram size={28} />
+      <div className="relative z-10 max-w-[1600px] mx-auto px-8 md:px-16 py-12 min-h-screen flex flex-col">
+        {/* Navigation */}
+        <header className="flex items-center justify-between mb-24">
+          <div className="flex items-center space-x-4 cursor-pointer group" onClick={reset}>
+            <div className="bg-gradient-to-tr from-indigo-600 to-pink-600 p-3 rounded-2xl text-white shadow-2xl group-hover:scale-110 transition-transform duration-500">
+              <Instagram size={32} />
             </div>
             <div className="flex flex-col">
-              <span className="text-2xl font-black tracking-tighter text-gray-900 leading-none">InstaMemories</span>
-              <span className="text-[10px] font-bold uppercase tracking-widest text-pink-500 mt-0.5">Anniversary Edition</span>
+              <span className="text-3xl font-black tracking-tighter leading-none">InstaMemories</span>
+              <span className="text-xs font-bold uppercase tracking-[0.3em] text-pink-500 mt-1 opacity-80">Anniversary Edition</span>
             </div>
-          </motion.div>
+          </div>
           
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="hidden md:flex items-center space-x-2 text-gray-500 font-medium bg-white/50 backdrop-blur-md px-4 py-2 rounded-full border border-white/50 shadow-sm"
-          >
-            <Sparkles size={16} className="text-yellow-500" />
-            <span className="text-sm">Powered by Gemini AI</span>
-          </motion.div>
+          <div className="hidden lg:flex items-center space-x-6 text-gray-400 font-bold bg-white/5 backdrop-blur-3xl px-8 py-3 rounded-full border border-white/10 shadow-2xl">
+            <div className="flex items-center space-x-2">
+              <Sparkles size={18} className="text-amber-400 animate-pulse" />
+              <span className="text-sm tracking-widest uppercase">Deep Storytelling Enabled</span>
+            </div>
+          </div>
         </header>
 
-        {/* Main Content Area */}
-        <main className="flex-grow flex flex-col items-center justify-center">
+        <main className="flex-grow flex flex-col items-center justify-center max-w-6xl mx-auto w-full">
           <AnimatePresence mode="wait">
+            {state.status === 'setup' && (
+              <motion.div key="setup" initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }} className="w-full max-w-2xl bg-gray-900/40 backdrop-blur-3xl p-16 rounded-[4rem] border border-white/5 shadow-[0_32px_128px_rgba(0,0,0,0.4)] text-center space-y-12">
+                <div className="relative inline-block">
+                  <div className="w-24 h-24 bg-gradient-to-br from-pink-500 to-purple-600 rounded-3xl flex items-center justify-center mx-auto text-white shadow-2xl transform rotate-12 group-hover:rotate-0 transition-transform duration-700">
+                    <Key size={48} />
+                  </div>
+                  <Heart className="absolute -top-4 -right-4 text-pink-500 fill-pink-500 animate-bounce" size={24} />
+                </div>
+                
+                <div className="space-y-4">
+                  <h2 className="text-5xl font-black tracking-tight leading-tight text-white">Unlock the Memory Vault</h2>
+                  <p className="text-xl text-gray-400 font-medium max-w-md mx-auto leading-relaxed">Enter your Gemini API Key to weave your year of messages into a story.</p>
+                </div>
+                
+                <form onSubmit={handleKeySubmit} className="space-y-8 max-w-md mx-auto">
+                  <input 
+                    type="password" 
+                    placeholder="Enter Key..." 
+                    value={state.customApiKey}
+                    onChange={e => setState(prev => ({ ...prev, customApiKey: e.target.value }))}
+                    className="w-full px-8 py-6 bg-black/40 border border-white/10 rounded-3xl text-gray-100 placeholder-gray-700 focus:ring-4 focus:ring-pink-500/20 focus:border-pink-500 outline-none transition-all font-black tracking-[0.5em] text-center"
+                  />
+                  <button type="submit" className="group relative w-full py-6 bg-white text-black rounded-3xl font-black text-xl overflow-hidden transition-all hover:shadow-[0_0_40px_rgba(255,255,255,0.2)] active:scale-[0.98]">
+                    <span className="relative z-10 flex items-center justify-center space-x-2">
+                      <span>Begin Analysis</span>
+                      <Heart size={20} className="fill-black" />
+                    </span>
+                  </button>
+                </form>
+                
+                <p className="text-sm text-gray-500 font-medium italic opacity-60">Secure processing. Direct to API. Private always.</p>
+              </motion.div>
+            )}
+
             {state.status === 'idle' && (
-              <motion.div
-                key="idle"
-                initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: -20 }}
-                transition={{ type: "spring", stiffness: 200, damping: 20 }}
-                className="w-full"
-              >
-                <div className="text-center mb-16 max-w-4xl mx-auto">
-                  <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ type: "spring", bounce: 0.5, delay: 0.2 }}
-                    className="inline-flex items-center space-x-2 bg-pink-100 text-pink-600 px-4 py-1.5 rounded-full text-sm font-bold mb-8 shadow-sm"
-                  >
-                    <Heart size={14} className="fill-pink-600" />
-                    <span>Celebrate Your First Year Together</span>
-                  </motion.div>
-                  
-                  <h1 className="text-6xl md:text-8xl font-black tracking-tight mb-8 text-gray-900 leading-[1.1]">
-                    Relive your <br/>
-                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 via-pink-500 to-orange-400">
-                      favorite moments
+              <motion.div key="idle" initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -40 }} className="w-full text-center space-y-24">
+                <div className="space-y-10">
+                  <div className="inline-flex items-center space-x-3 bg-green-500/10 text-green-400 px-6 py-2.5 rounded-full text-xs font-black border border-green-500/20 uppercase tracking-[0.2em]">
+                    <CheckCircle2 size={14} />
+                    <span>Memory Vault Authenticated</span>
+                  </div>
+                  <h1 className="text-7xl md:text-9xl font-black tracking-tighter leading-[0.9] text-white">
+                    Relive every<br/>
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-pink-400 to-amber-300">
+                      breathless moment
                     </span>
                   </h1>
-                  <p className="text-xl md:text-2xl text-gray-600 max-w-2xl mx-auto leading-relaxed font-medium">
-                    Turn your Instagram chat history into a beautiful, AI-powered anniversary story.
-                    Discover your stats, highlights, and hidden memories.
+                  <p className="text-2xl md:text-3xl text-gray-400 max-w-3xl mx-auto font-medium leading-relaxed">
+                    Transform your 370,000+ messages into a breathtaking narrative of your first year together.
                   </p>
                 </div>
-
+                
                 <FileUpload onFilesSelected={handleFilesSelected} />
                 
-                <div className="mt-12 text-center">
-                  <button 
-                    onClick={() => setState(prev => ({ ...prev, showAdvanced: !prev.showAdvanced }))} 
-                    className="text-sm text-gray-500 font-bold hover:text-purple-600 transition-all flex items-center justify-center mx-auto space-x-2 bg-white/40 hover:bg-white/80 px-4 py-2 rounded-full border border-white/40"
-                  >
-                    <span>{state.showAdvanced ? 'Hide Settings' : 'Advanced Settings'}</span>
-                    <motion.span animate={{ rotate: state.showAdvanced ? 180 : 0 }}>↓</motion.span>
+                <div className="flex flex-col items-center space-y-6 pt-12">
+                  <button onClick={() => setState(prev => ({ ...prev, status: 'setup' }))} className="text-[10px] text-gray-500 font-black hover:text-pink-400 transition-colors uppercase tracking-[0.4em]">
+                    Manage Access Key
                   </button>
-                  
-                  <AnimatePresence>
-                    {state.showAdvanced && (
-                      <motion.div 
-                        initial={{ opacity: 0, height: 0, y: 10 }}
-                        animate={{ opacity: 1, height: 'auto', y: 0 }}
-                        exit={{ opacity: 0, height: 0, y: 10 }}
-                        className="mt-6 max-w-md mx-auto space-y-5 text-left bg-white/80 p-8 rounded-[2.5rem] border border-white shadow-2xl backdrop-blur-xl overflow-hidden"
+                  <div className="flex items-center space-x-4">
+                    {['gemini-flash-latest', 'gemini-pro-latest'].map(model => (
+                      <button 
+                        key={model}
+                        onClick={() => setState(prev => ({ ...prev, selectedModel: model }))}
+                        className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border transition-all ${
+                          state.selectedModel === model 
+                            ? 'bg-white text-black border-white' 
+                            : 'bg-transparent text-gray-500 border-gray-800 hover:border-gray-600'
+                        }`}
                       >
-                        <div>
-                          <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Gemini API Key (Optional)</label>
-                          <input 
-                            type="password" 
-                            value={state.customApiKey} 
-                            onChange={e => setState(prev => ({ ...prev, customApiKey: e.target.value }))} 
-                            placeholder="AIzaSy..."
-                            className="w-full px-5 py-3 rounded-2xl border border-gray-100 focus:ring-4 focus:ring-purple-500/10 focus:border-purple-500 outline-none bg-white/50 transition-all font-medium"
-                          />
-                          <p className="text-[10px] text-gray-400 mt-2 ml-1 leading-relaxed">
-                            Your key is used only in this session and never stored on any server.
-                          </p>
-                        </div>
-                        <div>
-                          <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">AI Model Strategy</label>
-                          <select 
-                            value={state.selectedModel} 
-                            onChange={e => setState(prev => ({ ...prev, selectedModel: e.target.value }))}
-                            className="w-full px-5 py-3 rounded-2xl border border-gray-100 focus:ring-4 focus:ring-purple-500/10 focus:border-purple-500 outline-none bg-white/50 transition-all font-bold text-gray-700"
-                          >
-                            <option value="gemini-flash-latest">Gemini Flash (Latest)</option>
-                            <option value="gemini-pro-latest">Gemini Pro (Deep Reasoning)</option>
-                            <option value="gemini-flash-lite-latest">Gemini Flash Lite (Fastest)</option>
-                          </select>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                        {model.split('-')[1]}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </motion.div>
             )}
 
-            {(state.status === 'parsing' || state.status === 'generating') && (
-              <motion.div
-                key="loading"
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                transition={{ type: "spring", stiffness: 200, damping: 20 }}
-              >
-                <LoadingState 
-                  status={state.status === 'parsing' ? "Reading your chat history..." : "AI is analyzing your journey..."} 
-                />
+            {state.status === 'analyzing' && (
+              <motion.div key="loading" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}>
+                <LoadingState status="Our Story is Unfolding" steps={state.steps} />
               </motion.div>
             )}
 
             {state.status === 'success' && state.memories && (
-              <motion.div
-                key="success"
-                initial={{ opacity: 0, y: 40 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ type: "spring", stiffness: 100, damping: 20 }}
-                className="w-full"
-              >
-                <Memories 
-                  data={state.memories} 
-                  messages={state.rawMessages} 
-                  customApiKey={state.customApiKey} 
-                  selectedModel={state.selectedModel} 
-                />
-                
-                <motion.div 
-                  initial={{ opacity: 0 }}
-                  whileInView={{ opacity: 1 }}
-                  viewport={{ once: true }}
-                  className="mt-20 text-center pb-24"
-                >
-                  <button 
-                    onClick={reset}
-                    className="px-10 py-4 bg-white/80 backdrop-blur-md border border-gray-200 text-gray-800 rounded-full font-bold shadow-lg hover:shadow-xl hover:bg-white transition-all transform hover:-translate-y-1"
-                  >
-                    Analyze Another Story
-                  </button>
-                </motion.div>
+              <motion.div key="success" initial={{ opacity: 0, y: 60 }} animate={{ opacity: 1, y: 0 }} className="w-full">
+                <Memories data={state.memories} messages={state.rawMessages} customApiKey={state.customApiKey} selectedModel={state.selectedModel} />
+                <div className="mt-32 text-center pb-32">
+                  <button onClick={reset} className="px-12 py-5 bg-white/5 backdrop-blur-3xl border border-white/10 text-white rounded-full font-black text-lg shadow-2xl hover:bg-white hover:text-black transition-all transform hover:-translate-y-2">Analyze Another Journey</button>
+                </div>
               </motion.div>
             )}
 
             {state.status === 'error' && (
-              <motion.div
-                key="error"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-red-50/80 backdrop-blur-md border border-red-100 text-red-600 p-10 rounded-[2.5rem] max-w-lg mx-auto text-center shadow-2xl"
-              >
-                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6 text-red-500">
-                  <Sparkles size={32} />
+              <motion.div key="error" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="w-full max-w-2xl bg-red-950/20 backdrop-blur-3xl border border-red-500/20 p-16 rounded-[4rem] text-center space-y-10 shadow-[0_0_100px_rgba(239,68,68,0.1)]">
+                <div className="w-24 h-24 bg-red-500/10 rounded-full flex items-center justify-center mx-auto text-red-500 animate-pulse">
+                  <AlertCircle size={48} />
                 </div>
-                <h3 className="text-2xl font-black mb-3 text-red-900">Something went wrong</h3>
-                <p className="font-medium text-red-700/80 leading-relaxed">{state.error}</p>
-                <button 
-                  onClick={reset}
-                  className="mt-8 px-8 py-3 bg-red-600 text-white rounded-full font-bold hover:bg-red-700 transition-colors shadow-lg shadow-red-500/30"
-                >
-                  Try Again
-                </button>
+                <div className="space-y-4">
+                  <h3 className="text-4xl font-black text-white">Something Stumbled</h3>
+                  <p className="text-lg text-red-200/60 font-medium leading-relaxed max-w-md mx-auto">{state.error}</p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left max-w-md mx-auto">
+                  {['Check API Key', 'Verify Network', 'Retry Analysis', 'Switch Model'].map((tip, i) => (
+                    <div key={i} className="flex items-center space-x-3 bg-red-500/5 px-4 py-3 rounded-2xl border border-red-500/10">
+                      <div className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                      <span className="text-[10px] font-black uppercase tracking-widest text-red-400">{tip}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex flex-col space-y-4 pt-6 max-w-xs mx-auto">
+                  <button onClick={reset} className="w-full py-5 bg-red-600 text-white rounded-3xl font-black text-lg hover:bg-red-500 transition-all shadow-2xl shadow-red-600/20">Try Again</button>
+                  <button onClick={() => setState(prev => ({ ...prev, status: 'setup' }))} className="text-xs text-gray-500 font-bold hover:text-white transition-colors uppercase tracking-[0.3em]">Reset Credentials</button>
+                </div>
               </motion.div>
             )}
           </AnimatePresence>
