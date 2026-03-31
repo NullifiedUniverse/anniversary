@@ -25,43 +25,41 @@ export function MemoriesHeader({ participants, vibe }: MemoriesHeaderProps) {
       viewport={{ once: true, margin: "-100px" }}
       variants={{
         hidden: { opacity: 0, y: 50 },
-        show: { opacity: 1, y: 0, transition: { duration: 0.8, staggerChildren: 0.2 } }
+        show: { opacity: 1, y: 0, transition: { duration: 1.2, staggerChildren: 0.3 } }
       }}
-      className="space-y-12 relative pt-12 pb-8"
+      className="space-y-16 relative pt-24 pb-12"
     >
       <SectionParticles />
-      <div className="text-center space-y-6 relative z-10">
+      <div className="text-center space-y-10 relative z-10">
         <motion.div 
           initial={{ scale: 0, rotate: -180 }} 
           animate={{ scale: 1, rotate: 0 }} 
-          transition={{ type: "spring", bounce: 0.6, duration: 1.5 }}
-          className="inline-flex items-center justify-center p-6 bg-gradient-to-br from-pink-900/30 to-purple-900/30 rounded-full mb-2 shadow-sm border border-pink-500/20"
+          transition={{ type: "spring", bounce: 0.6, duration: 2 }}
+          className="inline-flex items-center justify-center p-8 bg-gradient-to-br from-pink-900/40 to-purple-900/40 rounded-[2.5rem] mb-4 shadow-[0_20px_50px_rgba(236,72,153,0.2)] border border-pink-500/20"
         >
-          <Heart role="img" aria-label="Heart icon" className="w-16 h-16 text-pink-500 fill-pink-500" />
+          <Heart role="img" aria-label="Heart icon" className="w-20 h-20 text-pink-500 fill-pink-500 blur-[1px]" />
         </motion.div>
         
-        <div className="space-y-2">
+        <div className="space-y-4">
           <motion.p 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            className="text-pink-400 font-bold tracking-widest uppercase text-sm"
+            variants={{ hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 } }}
+            className="text-pink-500 font-black tracking-[0.5em] uppercase text-xs opacity-80"
           >
-            Celebrating Our
+            A Cinematic Celebration of Our
           </motion.p>
-          <h1 className="text-4xl md:text-6xl font-black text-gray-100 tracking-tight">
-            1st Anniversary
+          <h1 className="text-6xl md:text-8xl font-black text-white tracking-tighter leading-none">
+            First Year
           </h1>
         </div>
 
-        <h2 className="text-5xl md:text-7xl font-black tracking-tight text-gray-100 leading-tight">
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">
+        <h2 className="text-6xl md:text-[9rem] font-black tracking-tighter text-white leading-none flex flex-wrap items-center justify-center gap-x-8">
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 drop-shadow-[0_10px_30px_rgba(129,140,248,0.3)]">
             {formatName(participants[0])}
           </span>
           {participants[1] && (
             <>
-              <span className="text-gray-700 mx-6">&</span>
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-orange-300">
+              <span className="text-gray-800 text-4xl md:text-6xl">&</span>
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-400 via-rose-400 to-amber-300 drop-shadow-[0_10px_30px_rgba(244,114,182,0.3)]">
                 {formatName(participants[1])}
               </span>
             </>
@@ -69,11 +67,10 @@ export function MemoriesHeader({ participants, vibe }: MemoriesHeaderProps) {
         </h2>
         
         <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.8, duration: 0.5 }}
+          variants={{ hidden: { opacity: 0, scale: 0.95 }, show: { opacity: 1, scale: 1 } }}
+          className="max-w-3xl mx-auto"
         >
-          <p className="text-2xl md:text-3xl text-gray-400 font-medium italic tracking-wide max-w-2xl mx-auto">
+          <p className="text-3xl md:text-4xl text-gray-500 font-serif italic tracking-wide leading-relaxed">
             "{vibe}"
           </p>
         </motion.div>

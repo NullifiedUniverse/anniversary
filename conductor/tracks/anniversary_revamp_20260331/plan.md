@@ -22,8 +22,14 @@
 - [x] Task: Audit Visibility in Dark Mode (Verified all components use dark-aware colors)
 - [x] Task: Conductor - User Manual Verification 'Phase 4' (Protocol in workflow.md)
 
-## Phase 5: MacBook Redesign & Final Polish
+## Phase 5: MacBook Redesign & Final Polish [checkpoint: 8edd1c6]
 - [x] Task: Redesign UI for MacBook Laptop Screen (Expanded layouts, premium dark mode)
 - [x] Task: Fix Proxy 500 Errors & Recharts Persistence (Robust proxy logic, stable containers)
 - [x] Task: Security Cleanup (Removed hardcoded API keys)
 - [x] Task: Final Verification & Commit (All tests passing, changes pushed)
+
+## Phase 6: Final Cinematic Polish & Deployment
+- [x] Task: Add Gemini Flash Lite Option (Update App.tsx selection)
+- [x] Task: Evocative Text Overhaul (Poetic copy across all components)
+- [~] Task: Compile & Final Push (Verify build and push to GitHub)
+- [ ] Task: Conductor - User Manual Verification 'Phase 6' (Protocol in workflow.md)

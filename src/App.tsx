@@ -20,11 +20,11 @@ interface AppState {
 }
 
 const INITIAL_STEPS: LoadingStep[] = [
-  { id: 'load', label: 'Preparing memory vault', status: 'pending' },
-  { id: 'parse', label: 'Processing 370k+ messages', status: 'pending' },
-  { id: 'sample', label: 'Weaving emotional context', status: 'pending' },
-  { id: 'ai', label: 'Gemini AI deep storytelling', status: 'pending' },
-  { id: 'render', label: 'Finalizing your journey', status: 'pending' },
+  { id: 'load', label: 'Awakening the memory vault', status: 'pending' },
+  { id: 'parse', label: 'Tracing your shared history', status: 'pending' },
+  { id: 'sample', label: 'Weaving the threads of your story', status: 'pending' },
+  { id: 'ai', label: 'Gemini AI reliving the magic', status: 'pending' },
+  { id: 'render', label: 'Painting your digital journey', status: 'pending' },
 ];
 
 const Particles = () => {
@@ -86,7 +86,7 @@ export default function App() {
 
   const runAnalysis = async (messages: ChatMessage[], apiKey: string, modelName: string) => {
     try {
-      console.log(`[App] 🚀 Initializing Analysis Flow...`);
+      console.log(`[App] 🚀 Commencing Analysis...`);
       setState(prev => ({ ...prev, status: 'analyzing', rawMessages: messages }));
       
       updateStep('load', 'complete');
@@ -111,7 +111,7 @@ export default function App() {
       console.error("[App] ❌ Analysis Failure:", err);
       setState(prev => ({ 
         ...prev, 
-        error: err instanceof Error ? err.message : "The vault encountered a problem.", 
+        error: err instanceof Error ? err.message : "The story encountered a chapter it couldn't read.", 
         status: 'error' 
       }));
     }
@@ -140,10 +140,10 @@ export default function App() {
     try {
       setState(prev => ({ ...prev, error: null, status: 'analyzing', steps: INITIAL_STEPS }));
       const messages = await parseFiles(files);
-      if (messages.length === 0) throw new Error("No memories found in those files.");
+      if (messages.length === 0) throw new Error("No memories were found in those files.");
       runAnalysis(messages, state.customApiKey, state.selectedModel);
     } catch (err) {
-      setState(prev => ({ ...prev, error: err instanceof Error ? err.message : "Processing failed", status: 'error' }));
+      setState(prev => ({ ...prev, error: err instanceof Error ? err.message : "The messages couldn't be traced.", status: 'error' }));
     }
   };
 
@@ -172,14 +172,14 @@ export default function App() {
             </div>
             <div className="flex flex-col">
               <span className="text-3xl font-black tracking-tighter leading-none">InstaMemories</span>
-              <span className="text-xs font-bold uppercase tracking-[0.3em] text-pink-500 mt-1 opacity-80">Anniversary Edition</span>
+              <span className="text-xs font-bold uppercase tracking-[0.3em] text-pink-500 mt-1 opacity-80 italic">A Love Story in Data</span>
             </div>
           </div>
           
           <div className="hidden lg:flex items-center space-x-6 text-gray-400 font-bold bg-white/5 backdrop-blur-3xl px-8 py-3 rounded-full border border-white/10 shadow-2xl">
             <div className="flex items-center space-x-2">
               <Sparkles size={18} className="text-amber-400 animate-pulse" />
-              <span className="text-sm tracking-widest uppercase">Deep Storytelling Enabled</span>
+              <span className="text-sm tracking-widest uppercase">Cinematic Analysis Active</span>
             </div>
           </div>
         </header>
@@ -196,27 +196,27 @@ export default function App() {
                 </div>
                 
                 <div className="space-y-4">
-                  <h2 className="text-5xl font-black tracking-tight leading-tight text-white">Unlock the Memory Vault</h2>
-                  <p className="text-xl text-gray-400 font-medium max-w-md mx-auto leading-relaxed">Enter your Gemini API Key to weave your year of messages into a story.</p>
+                  <h2 className="text-5xl font-black tracking-tight leading-tight text-white">Open the Vault</h2>
+                  <p className="text-xl text-gray-400 font-medium max-w-md mx-auto leading-relaxed">Provide your Gemini API Key to relive your shared history.</p>
                 </div>
                 
                 <form onSubmit={handleKeySubmit} className="space-y-8 max-w-md mx-auto">
                   <input 
                     type="password" 
-                    placeholder="Enter Key..." 
+                    placeholder="ENTER KEY" 
                     value={state.customApiKey}
                     onChange={e => setState(prev => ({ ...prev, customApiKey: e.target.value }))}
                     className="w-full px-8 py-6 bg-black/40 border border-white/10 rounded-3xl text-gray-100 placeholder-gray-700 focus:ring-4 focus:ring-pink-500/20 focus:border-pink-500 outline-none transition-all font-black tracking-[0.5em] text-center"
                   />
                   <button type="submit" className="group relative w-full py-6 bg-white text-black rounded-3xl font-black text-xl overflow-hidden transition-all hover:shadow-[0_0_40px_rgba(255,255,255,0.2)] active:scale-[0.98]">
                     <span className="relative z-10 flex items-center justify-center space-x-2">
-                      <span>Begin Analysis</span>
+                      <span>Begin the Journey</span>
                       <Heart size={20} className="fill-black" />
                     </span>
                   </button>
                 </form>
                 
-                <p className="text-sm text-gray-500 font-medium italic opacity-60">Secure processing. Direct to API. Private always.</p>
+                <p className="text-sm text-gray-500 font-medium italic opacity-60">Private. Secure. For your eyes only.</p>
               </motion.div>
             )}
 
@@ -230,11 +230,11 @@ export default function App() {
                   <h1 className="text-7xl md:text-9xl font-black tracking-tighter leading-[0.9] text-white">
                     Relive every<br/>
                     <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-pink-400 to-amber-300">
-                      breathless moment
+                      soulful moment
                     </span>
                   </h1>
-                  <p className="text-2xl md:text-3xl text-gray-400 max-w-3xl mx-auto font-medium leading-relaxed">
-                    Transform your 370,000+ messages into a breathtaking narrative of your first year together.
+                  <p className="text-2xl md:text-3xl text-gray-400 max-w-3xl mx-auto font-medium leading-relaxed italic">
+                    Transforming 370,000+ messages into your first year together.
                   </p>
                 </div>
                 
@@ -245,17 +245,21 @@ export default function App() {
                     Manage Access Key
                   </button>
                   <div className="flex items-center space-x-4">
-                    {['gemini-flash-latest', 'gemini-pro-latest'].map(model => (
+                    {[
+                      { id: 'gemini-flash-latest', label: 'Flash' },
+                      { id: 'gemini-flash-lite-latest', label: 'Lite' },
+                      { id: 'gemini-pro-latest', label: 'Pro' }
+                    ].map(model => (
                       <button 
-                        key={model}
-                        onClick={() => setState(prev => ({ ...prev, selectedModel: model }))}
+                        key={model.id}
+                        onClick={() => setState(prev => ({ ...prev, selectedModel: model.id }))}
                         className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border transition-all ${
-                          state.selectedModel === model 
+                          state.selectedModel === model.id 
                             ? 'bg-white text-black border-white' 
                             : 'bg-transparent text-gray-500 border-gray-800 hover:border-gray-600'
                         }`}
                       >
-                        {model.split('-')[1]}
+                        {model.label}
                       </button>
                     ))}
                   </div>
@@ -265,7 +269,7 @@ export default function App() {
 
             {state.status === 'analyzing' && (
               <motion.div key="loading" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}>
-                <LoadingState status="Our Story is Unfolding" steps={state.steps} />
+                <LoadingState status="The Magic is Unfolding" steps={state.steps} />
               </motion.div>
             )}
 
@@ -284,11 +288,11 @@ export default function App() {
                   <AlertCircle size={48} />
                 </div>
                 <div className="space-y-4">
-                  <h3 className="text-4xl font-black text-white">Something Stumbled</h3>
+                  <h3 className="text-4xl font-black text-white uppercase tracking-tighter">Chapter Interrupted</h3>
                   <p className="text-lg text-red-200/60 font-medium leading-relaxed max-w-md mx-auto">{state.error}</p>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left max-w-md mx-auto">
-                  {['Check API Key', 'Verify Network', 'Retry Analysis', 'Switch Model'].map((tip, i) => (
+                  {['Verify API Key', 'Connection Check', 'Try Again', 'Switch Model'].map((tip, i) => (
                     <div key={i} className="flex items-center space-x-3 bg-red-500/5 px-4 py-3 rounded-2xl border border-red-500/10">
                       <div className="w-1.5 h-1.5 rounded-full bg-red-500" />
                       <span className="text-[10px] font-black uppercase tracking-widest text-red-400">{tip}</span>
@@ -296,8 +300,8 @@ export default function App() {
                   ))}
                 </div>
                 <div className="flex flex-col space-y-4 pt-6 max-w-xs mx-auto">
-                  <button onClick={reset} className="w-full py-5 bg-red-600 text-white rounded-3xl font-black text-lg hover:bg-red-500 transition-all shadow-2xl shadow-red-600/20">Try Again</button>
-                  <button onClick={() => setState(prev => ({ ...prev, status: 'setup' }))} className="text-xs text-gray-500 font-bold hover:text-white transition-colors uppercase tracking-[0.3em]">Reset Credentials</button>
+                  <button onClick={reset} className="w-full py-5 bg-red-600 text-white rounded-3xl font-black text-lg hover:bg-red-500 transition-all shadow-2xl shadow-red-600/20 uppercase tracking-widest">Retry Story</button>
+                  <button onClick={() => setState(prev => ({ ...prev, status: 'setup' }))} className="text-xs text-gray-500 font-bold hover:text-white transition-colors uppercase tracking-[0.3em]">Reset Access</button>
                 </div>
               </motion.div>
             )}
