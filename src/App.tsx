@@ -61,7 +61,7 @@ export default function App() {
     rawMessages: [],
     error: null,
     customApiKey: localStorage.getItem('insta_memories_key') || '',
-    selectedModel: localStorage.getItem('insta_memories_model') || 'gemini-flash-latest',
+    selectedModel: localStorage.getItem('insta_memories_model') || 'gemini-2.0-flash',
     ollamaEndpoint: localStorage.getItem('insta_memories_ollama_endpoint') || 'http://localhost:11434',
     steps: INITIAL_STEPS,
   });
@@ -99,17 +99,26 @@ export default function App() {
   const handleKeySubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const trimmedKey = state.customApiKey.trim();
-    if (trimmedKey || state.selectedModel.startsWith('ollama')) {
+    const isOllama = state.selectedModel.startsWith('ollama');
+    
+    if (trimmedKey || isOllama) {
+      if (isOllama && state.selectedModel === 'ollama') {
+        alert("Please select a specific local model from the dropdown.");
+        return;
+      }
+      
       localStorage.setItem('insta_memories_key', trimmedKey);
       localStorage.setItem('insta_memories_model', state.selectedModel);
       localStorage.setItem('insta_memories_ollama_endpoint', state.ollamaEndpoint);
       setState(prev => ({ ...prev, status: 'idle', customApiKey: trimmedKey }));
+    } else {
+      alert("Please provide an API Key.");
     }
   };
 
   const runAnalysis = async (messages: ChatMessage[], apiKey: string, modelName: string, ollamaEndpoint: string) => {
     try {
-      console.log(`[App] 🚀 Commencing Analysis Flow...`);
+      console.log(`[App] 🚀 Commencing Analysis Flow... | Model: ${modelName}`);
       setState(prev => ({ ...prev, status: 'analyzing', rawMessages: messages }));
       
       updateStep('load', 'complete');
@@ -226,8 +235,8 @@ export default function App() {
                   <div className="space-y-6">
                     <div className="flex items-center justify-center space-x-3">
                       {[
-                        { id: 'gemini-flash-latest', label: 'Flash' },
-                        { id: 'gemini-pro-latest', label: 'Pro' },
+                        { id: 'gemini-2.0-flash', label: 'Flash' },
+                        { id: 'gemini-1.5-pro', label: 'Pro' },
                         { id: 'ollama', label: 'Ollama' }
                       ].map(model => (
                         <button 
@@ -268,7 +277,7 @@ export default function App() {
                             value={state.selectedModel.startsWith('ollama:') ? state.selectedModel : ''}
                             onChange={e => setState(prev => ({ ...prev, selectedModel: e.target.value }))}
                           >
-                            <option value="">Select a local model...</option>
+                            <option value="ollama">Select a local model...</option>
                             {ollamaModels.map(m => (
                               <option key={m} value={`ollama:${m}`}>{m}</option>
                             ))}

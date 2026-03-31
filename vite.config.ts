@@ -21,7 +21,8 @@ const aiProxy = () => ({
             
             // --- OLLAMA LOGIC ---
             if (modelName && modelName.startsWith('ollama:')) {
-              const actualModel = modelName.split(':')[1];
+              // Fix: Slice instead of split to keep full tags like :30b
+              const actualModel = modelName.slice(7); 
               const endpoint = (ollamaEndpoint || 'http://localhost:11434').replace(/\/$/, '');
               
               console.log(`[AI Proxy] 🏠 Calling Local Ollama (${actualModel}) at ${endpoint}...`);
@@ -32,7 +33,7 @@ const aiProxy = () => ({
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({
                     model: actualModel,
-                    prompt: prompt + "\n\nIMPORTANT: Return ONLY valid JSON that matches the requested schema. No conversational filler.",
+                    prompt: prompt + "\n\nIMPORTANT: You must respond with PURE JSON only. No markdown formatting, no backticks, no conversational text. The response must be a single valid JSON object matching the requested schema.",
                     stream: false,
                     format: 'json'
                   })
@@ -45,7 +46,14 @@ const aiProxy = () => ({
 
                 const data = await response.json();
                 res.setHeader('Content-Type', 'application/json');
-                res.end(data.response);
+                
+                // Ensure we strip any potential backticks or chatter if the model ignored the format: json flag
+                let cleanResponse = data.response.trim();
+                if (cleanResponse.startsWith('```')) {
+                  cleanResponse = cleanResponse.replace(/^```json/, '').replace(/^```/, '').replace(/```$/, '').trim();
+                }
+                
+                res.end(cleanResponse);
                 console.log(`[AI Proxy] ✅ Ollama Success.`);
                 return;
               } catch (ollamaErr: any) {
@@ -93,8 +101,14 @@ const aiProxy = () => ({
             if (!response.ok) {
               console.error("[AI Proxy] ❌ Gemini API Error:", data);
               res.statusCode = response.status;
+              
+              let errorMessage = "Gemini API Error";
+              if (data.error?.message) {
+                errorMessage = data.error.message;
+              }
+              
               return res.end(JSON.stringify({ 
-                error: data.error?.message || "Gemini API Error",
+                error: errorMessage,
                 details: data.error 
               }));
             }
