@@ -47,10 +47,10 @@ export function Memories({ data, messages, customApiKey, selectedModel }: Memori
 
   const tabs = [
     { id: 'story', label: 'Our Story', icon: <BookOpen className="w-5 h-5" /> },
-    { id: 'stats', label: 'By The Numbers', icon: <BarChart3 className="w-5 h-5" /> },
-    { id: 'words', label: 'Your Words', icon: <Cloud className="w-5 h-5" /> },
-    { id: 'highlights', label: 'Highlights', icon: <Star className="w-5 h-5" /> },
-    { id: 'future', label: 'Future & Awards', icon: <Heart className="w-5 h-5" /> },
+    { id: 'stats', label: 'Our Rhythm', icon: <BarChart3 className="w-5 h-5" /> },
+    { id: 'words', label: 'Our Language', icon: <Cloud className="w-5 h-5" /> },
+    { id: 'highlights', label: 'Our Moments', icon: <Star className="w-5 h-5" /> },
+    { id: 'future', label: 'Our Future', icon: <Heart className="w-5 h-5" /> },
     { id: 'explore', label: 'Explore', icon: <Search className="w-5 h-5" /> },
   ];
 
@@ -79,6 +79,11 @@ export function Memories({ data, messages, customApiKey, selectedModel }: Memori
         behavior: 'smooth'
       });
     }
+  };
+
+  const sectionVariants = {
+    hidden: { opacity: 0, scale: 0.95, y: 30 },
+    show: { opacity: 1, scale: 1, y: 0, transition: { type: "spring", stiffness: 50, damping: 20 } }
   };
 
   return (
@@ -122,20 +127,44 @@ export function Memories({ data, messages, customApiKey, selectedModel }: Memori
       {/* Page Content Area */}
       <div className="flex flex-col space-y-32 py-12 px-4 md:px-12">
         
-        <div ref={sectionRefs.story}>
+        <motion.div 
+          ref={sectionRefs.story}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, margin: "-100px" }}
+          variants={sectionVariants}
+        >
           <MemoriesHeader participants={data.participants} vibe={data.vibe} />
           <StorySection data={data} />
-        </div>
+        </motion.div>
 
-        <div ref={sectionRefs.stats}>
+        <motion.div 
+          ref={sectionRefs.stats}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, margin: "-100px" }}
+          variants={sectionVariants}
+        >
           <StatsSection data={data} />
-        </div>
+        </motion.div>
 
-        <div ref={sectionRefs.words}>
+        <motion.div 
+          ref={sectionRefs.words}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, margin: "-100px" }}
+          variants={sectionVariants}
+        >
           <WordCloudSection data={data} />
-        </div>
+        </motion.div>
 
-        <div ref={sectionRefs.highlights}>
+        <motion.div 
+          ref={sectionRefs.highlights}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, margin: "-100px" }}
+          variants={sectionVariants}
+        >
           <HighlightsSection 
             highlights={highlights}
             milestones={milestones}
@@ -156,9 +185,15 @@ export function Memories({ data, messages, customApiKey, selectedModel }: Memori
             onLoadMoreInsights={() => generateMore('insights')}
             onLoadMoreJokes={() => generateMore('jokes')}
           />
-        </div>
+        </motion.div>
 
-        <div ref={sectionRefs.future}>
+        <motion.div 
+          ref={sectionRefs.future}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, margin: "-100px" }}
+          variants={sectionVariants}
+        >
           <FutureSection 
             adventures={futureAdventures}
             superlatives={superlatives}
@@ -167,11 +202,17 @@ export function Memories({ data, messages, customApiKey, selectedModel }: Memori
             onLoadMoreAdventures={() => generateMore('futureAdventures')}
             onLoadMoreSuperlatives={() => generateMore('superlatives')}
           />
-        </div>
+        </motion.div>
 
-        <div ref={sectionRefs.explore}>
+        <motion.div 
+          ref={sectionRefs.explore}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, margin: "-100px" }}
+          variants={sectionVariants}
+        >
           <ExploreSection messages={messages} participants={data.participants} />
-        </div>
+        </motion.div>
 
         {/* CELEBRATION FOOTER */}
         <motion.div 
@@ -185,7 +226,7 @@ export function Memories({ data, messages, customApiKey, selectedModel }: Memori
             transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
             className="inline-block mb-8"
           >
-            <Heart className="w-24 h-24 text-pink-500 fill-pink-500" />
+            <Heart aria-label="Big heart icon" className="w-24 h-24 text-pink-500 fill-pink-500" />
           </motion.div>
           <h2 className="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-500 mb-6">
             Happy Anniversary!
