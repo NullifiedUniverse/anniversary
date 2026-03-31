@@ -165,7 +165,30 @@ export async function generateMemories(
   sampledTranscript += "\n--- RECENT ---\n";
   messages.slice(-150).forEach(m => sampledTranscript += formatMsg(m));
 
-  const prompt = `Analyze the chat between ${participants.join(' and ')}. Create a romantic 1-year anniversary summary.
+  const formatParticipant = (p: string) => {
+    const lp = p.toLowerCase();
+    if (lp.includes('nullifiedgalaxy')) return 'Null';
+    if (lp.includes('vanessa')) return 'Yun';
+    return p;
+  };
+
+  const p1 = formatParticipant(participants[0]);
+  const p2 = formatParticipant(participants[1] || '');
+
+  const prompt = `You are a romantic storyteller and a digital memory keeper. 
+  Your task is to analyze the chat between ${p1} and ${p2} and create a deeply sweet, emotional, and romantic summary for their 1st anniversary.
+  
+  This is a digital love letter from the data of their first year together.
+  
+  Focus on:
+  - The evolution of their connection from the very first message.
+  - The unique "vibe" of their relationship (e.g., playful, deeply soulful, supportive).
+  - Key milestones, inside jokes, and recurring themes that define them.
+  - Fun relationship superlatives that celebrate their quirks.
+  - A heartfelt look into their future adventures together.
+
+  The tone must be very sweet, romantic, and emotionally resonant. Use their names "${p1}" and "${p2}" (or their nicknames if identified) throughout the narrative.
+
   Transcript: ${sampledTranscript}`;
 
   const ai = getAI(customApiKey);
