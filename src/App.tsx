@@ -16,6 +16,7 @@ interface AppState {
   error: string | null;
   customApiKey: string;
   selectedModel: string;
+  ollamaEndpoint: string;
   steps: LoadingStep[];
 }
 
@@ -61,6 +62,7 @@ export default function App() {
     error: null,
     customApiKey: localStorage.getItem('insta_memories_key') || '',
     selectedModel: 'gemini-flash-latest',
+    ollamaEndpoint: 'http://localhost:11434',
     steps: INITIAL_STEPS,
   });
 
@@ -244,24 +246,38 @@ export default function App() {
                   <button onClick={() => setState(prev => ({ ...prev, status: 'setup' }))} className="text-[10px] text-gray-500 font-black hover:text-pink-400 transition-colors uppercase tracking-[0.4em]">
                     Manage Access Key
                   </button>
-                  <div className="flex items-center space-x-4">
-                    {[
-                      { id: 'gemini-flash-latest', label: 'Flash' },
-                      { id: 'gemini-flash-lite-latest', label: 'Lite' },
-                      { id: 'gemini-pro-latest', label: 'Pro' }
-                    ].map(model => (
-                      <button 
-                        key={model.id}
-                        onClick={() => setState(prev => ({ ...prev, selectedModel: model.id }))}
-                        className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border transition-all ${
-                          state.selectedModel === model.id 
-                            ? 'bg-white text-black border-white' 
-                            : 'bg-transparent text-gray-500 border-gray-800 hover:border-gray-600'
-                        }`}
-                      >
-                        {model.label}
-                      </button>
-                    ))}
+                  <div className="flex flex-col items-center space-y-4">
+                    <div className="flex items-center space-x-4">
+                      {[
+                        { id: 'gemini-flash-latest', label: 'Flash' },
+                        { id: 'gemini-flash-lite-latest', label: 'Lite' },
+                        { id: 'gemini-pro-latest', label: 'Pro' },
+                        { id: 'ollama', label: 'Local (Ollama)' }
+                      ].map(model => (
+                        <button 
+                          key={model.id}
+                          onClick={() => setState(prev => ({ ...prev, selectedModel: model.id }))}
+                          className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border transition-all ${
+                            state.selectedModel === model.id 
+                              ? 'bg-white text-black border-white' 
+                              : 'bg-transparent text-gray-500 border-gray-800 hover:border-gray-600'
+                          }`}
+                        >
+                          {model.label}
+                        </button>
+                      ))}
+                    </div>
+                    {state.selectedModel === 'ollama' && (
+                      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-xs">
+                        <input 
+                          type="text" 
+                          placeholder="Ollama Endpoint (e.g., http://localhost:11434)" 
+                          value={state.ollamaEndpoint}
+                          onChange={e => setState(prev => ({ ...prev, ollamaEndpoint: e.target.value }))}
+                          className="w-full px-4 py-2 bg-black/20 border border-white/5 rounded-xl text-[10px] text-gray-400 font-bold text-center outline-none focus:border-pink-500/50 transition-colors"
+                        />
+                      </motion.div>
+                    )}
                   </div>
                 </div>
               </motion.div>

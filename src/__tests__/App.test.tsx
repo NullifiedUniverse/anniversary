@@ -59,6 +59,23 @@ describe('App', () => {
     expect(await screen.findByText(/soulful moment/i)).toBeInTheDocument();
   });
 
+  it('allows switching models including Ollama', async () => {
+    render(<App />);
+    // Skip setup
+    fireEvent.change(await screen.findByPlaceholderText(/ENTER KEY/i), { target: { value: 'test-key' } });
+    await act(async () => {
+      fireEvent.click(screen.getByText(/Begin the Journey/i));
+    });
+
+    const liteBtn = await screen.findByText(/Lite/i);
+    fireEvent.click(liteBtn);
+    
+    const ollamaBtn = await screen.findByText(/Local \(Ollama\)/i);
+    fireEvent.click(ollamaBtn);
+    
+    expect(await screen.findByPlaceholderText(/Ollama Endpoint/i)).toBeInTheDocument();
+  });
+
   it('handles errors during file processing', async () => {
     vi.mocked(parseFiles).mockRejectedValue(new Error('Invalid files'));
 
