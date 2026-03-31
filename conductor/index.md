@@ -1,14 +1,5 @@
-# Project Context
+# Track phase2_audit_20260331 Context
 
-## Definition
-- [Product Definition](./product.md)
-- [Product Guidelines](./product-guidelines.md)
-- [Tech Stack](./tech-stack.md)
-
-## Workflow
-- [Workflow](./workflow.md)
-- [Code Style Guides](./code_styleguides/)
-
-## Management
-- [Tracks Registry](./tracks.md)
-- [Tracks Directory](./tracks/)
+- [Specification](./spec.md)
+- [Implementation Plan](./plan.md)
+- [Metadata](./metadata.json)
