@@ -78,7 +78,7 @@ export default function App() {
             setOllamaModels(data.models?.map((m: any) => m.name) || []);
           }
         } catch (e) {
-          // Silently fail if Ollama is not running
+          // Silently fail
         }
       };
       fetchOllamaModels();
@@ -107,7 +107,7 @@ export default function App() {
     }
   };
 
-  const runAnalysis = async (messages: ChatMessage[], apiKey: string, modelName: string) => {
+  const runAnalysis = async (messages: ChatMessage[], apiKey: string, modelName: string, ollamaEndpoint: string) => {
     try {
       console.log(`[App] 🚀 Commencing Analysis Flow...`);
       setState(prev => ({ ...prev, status: 'analyzing', rawMessages: messages }));
@@ -122,7 +122,7 @@ export default function App() {
       updateStep('sample', 'complete');
       
       updateStep('ai', 'loading');
-      const memoryData = await generateMemories(messages, apiKey, modelName);
+      const memoryData = await generateMemories(messages, apiKey, modelName, ollamaEndpoint);
       
       updateStep('ai', 'complete');
       updateStep('render', 'loading');
@@ -148,7 +148,7 @@ export default function App() {
           if (response.ok) {
             const messages = await response.json();
             if (messages?.length > 0) {
-              await runAnalysis(messages, state.customApiKey, state.selectedModel);
+              await runAnalysis(messages, state.customApiKey, state.selectedModel, state.ollamaEndpoint);
             }
           }
         } catch (e) {
@@ -164,7 +164,7 @@ export default function App() {
       setState(prev => ({ ...prev, error: null, status: 'analyzing', steps: INITIAL_STEPS }));
       const messages = await parseFiles(files);
       if (messages.length === 0) throw new Error("No memories were found in those files.");
-      runAnalysis(messages, state.customApiKey, state.selectedModel);
+      runAnalysis(messages, state.customApiKey, state.selectedModel, state.ollamaEndpoint);
     } catch (err) {
       setState(prev => ({ ...prev, error: err instanceof Error ? err.message : "The messages couldn't be traced.", status: 'error' }));
     }
@@ -187,7 +187,6 @@ export default function App() {
       <Particles />
 
       <div className="relative z-10 max-w-[1600px] mx-auto px-8 md:px-16 py-12 min-h-screen flex flex-col">
-        {/* Navigation */}
         <header className="flex items-center justify-between mb-24">
           <div className="flex items-center space-x-4 cursor-pointer group" onClick={reset}>
             <div className="bg-gradient-to-tr from-indigo-600 to-pink-600 p-3 rounded-2xl text-white shadow-2xl group-hover:scale-110 transition-transform duration-500">
@@ -275,7 +274,7 @@ export default function App() {
                             ))}
                           </select>
                         ) : (
-                          <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">No local models found. Ensure Ollama is running.</p>
+                          <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest text-center">No local models found. Ensure Ollama is running.</p>
                         )}
                       </div>
                     )}

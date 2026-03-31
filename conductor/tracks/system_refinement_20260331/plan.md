@@ -1,17 +1,16 @@
 # Implementation Plan: System Refinement: UI Polish, Pipeline Robustness, and Quality Engineering
 
-## Phase 1: UI Diagnostics & Aesthetic Polish
+## Phase 1: UI Diagnostics & Aesthetic Polish [checkpoint: e4be283]
 - [x] Task: Audit UI for Text Visibility and Contrast
-    - [ ] Inspect all sections (`Story`, `Stats`, `Quotes`, etc.) for text rendering issues.
-    - [ ] Verify visibility in dark mode across different screen sizes.
-- [x] Task: Fix Display Bugs and Layout Cut-offs (dd8660a)
+    - [x] Inspect all sections (`Story`, `Stats`, `Quotes`, etc.) for text rendering issues.
+    - [x] Verify visibility in dark mode across different screen sizes.
+- [x] Task: Fix Display Bugs and Layout Cut-offs (e4be283)
     - [x] Write Tests: Contrast and visibility checks for small text and ampersands.
     - [x] Implement: Update `text-gray-600` and `opacity-50` usage in `QuotesSection` and `StatsSection`.
     - [x] Implement: Refine tab bar `max-width` and centering for large screens.
     - [x] Implement: Add `min-h` and aspect ratio stability to Recharts containers.
-- [x] Task: Implement Initial Model Switcher UI (0f68a4d)
-    - [x] Implement: Basic model selection in `App.tsx`.
-- [ ] Task: Conductor - User Manual Verification 'Phase 1' (Protocol in workflow.md)
+    - [x] Implement: Initial Model Switcher UI (0f68a4d)
+- [x] Task: Conductor - User Manual Verification 'Phase 1' (Protocol in workflow.md) (e4be283)
 
 ## Phase 2: Pipeline Hardening
 - [ ] Task: Optimize Parsing logic for Large Datasets
