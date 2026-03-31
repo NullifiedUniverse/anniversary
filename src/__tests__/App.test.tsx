@@ -41,22 +41,22 @@ describe('App', () => {
     window.localStorage.clear();
   });
 
-  it('renders setup screen initially', () => {
+  it('renders setup screen initially', async () => {
     render(<App />);
-    expect(screen.getByText(/Unlock the Memory Vault/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Open the Vault/i)).toBeInTheDocument();
   });
 
   it('transitions to idle after entering key', async () => {
     render(<App />);
-    const input = screen.getByPlaceholderText(/Enter Key/i);
-    const submitBtn = screen.getByText(/Begin Analysis/i);
+    const input = await screen.findByPlaceholderText(/ENTER KEY/i);
+    const submitBtn = screen.getByText(/Begin the Journey/i);
 
     fireEvent.change(input, { target: { value: 'test-key' } });
     await act(async () => {
       fireEvent.click(submitBtn);
     });
 
-    expect(await screen.findByText(/breathless moment/i)).toBeInTheDocument();
+    expect(await screen.findByText(/soulful moment/i)).toBeInTheDocument();
   });
 
   it('handles errors during file processing', async () => {
@@ -64,8 +64,10 @@ describe('App', () => {
 
     render(<App />);
     // setup
-    fireEvent.change(screen.getByPlaceholderText(/Enter Key/i), { target: { value: 'test-key' } });
-    fireEvent.click(screen.getByText(/Begin Analysis/i));
+    fireEvent.change(await screen.findByPlaceholderText(/ENTER KEY/i), { target: { value: 'test-key' } });
+    await act(async () => {
+      fireEvent.click(screen.getByText(/Begin the Journey/i));
+    });
 
     const uploadBtn = await screen.findByText(/Upload/i);
     

@@ -36,11 +36,11 @@ describe('StatsSection', () => {
 
   it('shows tooltip on hover', () => {
     render(<StatsSection data={mockData} />);
-    const cardTitle = screen.getByText(/Total Words/i);
+    const cardTitle = screen.getByText(/Shared Words/i);
     const card = cardTitle.parentElement;
     if (!card) throw new Error('Card not found');
     
     fireEvent.mouseEnter(card);
-    expect(screen.getByText(/Every message is a page in our book/i)).toBeInTheDocument();
+    expect(screen.getByText(/Each message a heartbeat in our digital home/i)).toBeInTheDocument();
   });
 });
