@@ -58,7 +58,7 @@ export function MemoriesHeader({ participants, vibe }: MemoriesHeaderProps) {
           </span>
           {participants[1] && (
             <>
-              <span className="text-gray-800 text-4xl md:text-6xl">&</span>
+              <span className="text-gray-400 text-4xl md:text-6xl">&</span>
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-400 via-rose-400 to-amber-300 drop-shadow-[0_10px_30px_rgba(244,114,182,0.3)]">
                 {formatName(participants[1])}
               </span>
@@ -70,7 +70,7 @@ export function MemoriesHeader({ participants, vibe }: MemoriesHeaderProps) {
           variants={{ hidden: { opacity: 0, scale: 0.95 }, show: { opacity: 1, scale: 1 } }}
           className="max-w-3xl mx-auto"
         >
-          <p className="text-3xl md:text-4xl text-gray-500 font-serif italic tracking-wide leading-relaxed">
+          <p className="text-3xl md:text-4xl text-gray-400 font-serif italic tracking-wide leading-relaxed">
             "{vibe}"
           </p>
         </motion.div>

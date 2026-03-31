@@ -90,7 +90,7 @@ export function QuotesSection({
                     </span>
                   </div>
                   
-                  <div className="mt-4 text-xs font-black uppercase tracking-[0.4em] text-gray-600 opacity-50">
+                  <div className="mt-4 text-xs font-black uppercase tracking-[0.4em] text-gray-400">
                     {quote.context}
                   </div>
                 </div>

@@ -1,12 +1,14 @@
 # Implementation Plan: System Refinement: UI Polish, Pipeline Robustness, and Quality Engineering
 
 ## Phase 1: UI Diagnostics & Aesthetic Polish
-- [ ] Task: Audit UI for Text Visibility and Contrast
+- [x] Task: Audit UI for Text Visibility and Contrast
     - [ ] Inspect all sections (`Story`, `Stats`, `Quotes`, etc.) for text rendering issues.
     - [ ] Verify visibility in dark mode across different screen sizes.
-- [ ] Task: Fix Display Bugs and Layout Cut-offs
-    - [ ] Write Tests: Visual state verification for key components.
-    - [ ] Implement: Resolve identified cut-offs and invisible text.
+- [~] Task: Fix Display Bugs and Layout Cut-offs
+    - [ ] Write Tests: Contrast and visibility checks for small text and ampersands.
+    - [ ] Implement: Update `text-gray-600` and `opacity-50` usage in `QuotesSection` and `StatsSection`.
+    - [ ] Implement: Refine tab bar `max-width` and centering for large screens.
+    - [ ] Implement: Add `min-h` and aspect ratio stability to Recharts containers.
 - [ ] Task: Conductor - User Manual Verification 'Phase 1' (Protocol in workflow.md)
 
 ## Phase 2: Pipeline Hardening

@@ -94,9 +94,9 @@ export function Memories({ data, messages, customApiKey, selectedModel }: Memori
         initial={{ y: 100, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ type: "spring", stiffness: 100, damping: 30, delay: 1 }}
-        className="fixed bottom-10 left-1/2 -translate-x-1/2 z-50 pointer-events-none"
+        className="fixed bottom-10 left-1/2 -translate-x-1/2 z-50 w-[calc(100vw-2rem)] max-w-4xl flex justify-center pointer-events-none"
       >
-        <div className="bg-black/40 backdrop-blur-3xl border border-white/10 p-2 rounded-full shadow-[0_20px_50px_rgba(0,0,0,0.5)] flex items-center gap-1 pointer-events-auto">
+        <div className="bg-black/40 backdrop-blur-3xl border border-white/10 p-2 rounded-full shadow-[0_20px_50px_rgba(0,0,0,0.5)] flex items-center gap-1 pointer-events-auto overflow-x-auto no-scrollbar max-w-full">
           {tabs.map((tab) => {
             const isActive = activeSection === tab.id;
             return (

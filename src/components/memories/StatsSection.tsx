@@ -24,7 +24,7 @@ function StatCard({ icon, title, value, tooltip, delay = 0 }: { icon: React.Reac
       <div className="mb-8 p-6 bg-white/5 rounded-[2rem] group-hover:scale-110 group-hover:rotate-6 transition-all duration-700 shadow-xl border border-white/5">
         {icon}
       </div>
-      <h4 className="text-[10px] text-gray-500 font-black uppercase tracking-[0.5em] mb-4">{title}</h4>
+      <h4 className="text-[10px] text-gray-400 font-black uppercase tracking-[0.5em] mb-4">{title}</h4>
       <p className="text-6xl font-black text-white tracking-tighter drop-shadow-lg">{value}</p>
 
       <AnimatePresence>
@@ -107,7 +107,7 @@ export function StatsSection({ data }: StatsSectionProps) {
             </div>
           </div>
           
-          <div className="h-[450px] w-full relative z-10 px-4">
+          <div className="h-[450px] w-full relative z-10 px-4 min-h-[450px]">
             <ResponsiveContainer width="100%" height="100%" debounce={50}>
               <AreaChart data={chartData}>
                 <defs>
