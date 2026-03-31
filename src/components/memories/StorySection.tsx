@@ -10,6 +10,9 @@ interface StorySectionProps {
 export function StorySection({ data }: StorySectionProps) {
   const formatName = (name: string) => {
     if (!name) return "Unknown";
+    const lowerName = name.toLowerCase();
+    if (lowerName.includes('nullifiedgalaxy')) return "Null";
+    if (lowerName.includes('vanessa')) return "Yun";
     const cleanName = name.split(/_|(?=[A-Z])/)[0];
     return cleanName.charAt(0).toUpperCase() + cleanName.slice(1);
   };

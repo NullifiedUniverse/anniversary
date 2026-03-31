@@ -7,7 +7,17 @@ import { generateMemories, MemoryData } from './lib/gemini';
 import { motion, AnimatePresence, useScroll, useTransform, useSpring } from 'motion/react';
 import { Instagram, Sparkles, Heart } from 'lucide-react';
 
-type AppState = 'idle' | 'parsing' | 'generating' | 'success' | 'error';
+type AppStatus = 'idle' | 'parsing' | 'generating' | 'success' | 'error';
+
+interface AppState {
+  status: AppStatus;
+  memories: MemoryData | null;
+  rawMessages: ChatMessage[];
+  error: string | null;
+  customApiKey: string;
+  selectedModel: string;
+  showAdvanced: boolean;
+}
 
 const Particles = () => {
   const particles = useMemo(() => Array.from({ length: 40 }).map(() => ({
@@ -51,13 +61,15 @@ const Particles = () => {
 };
 
 export default function App() {
-  const [appState, setAppState] = useState<AppState>('idle');
-  const [memories, setMemories] = useState<MemoryData | null>(null);
-  const [rawMessages, setRawMessages] = useState<ChatMessage[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [customApiKey, setCustomApiKey] = useState('');
-  const [selectedModel, setSelectedModel] = useState('gemini-flash-latest');
-  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [state, setState] = useState<AppState>({
+    status: 'idle',
+    memories: null,
+    rawMessages: [],
+    error: null,
+    customApiKey: '',
+    selectedModel: 'gemini-flash-latest',
+    showAdvanced: false,
+  });
 
   const { scrollYProgress } = useScroll();
   const scaleX = useSpring(scrollYProgress, {
@@ -78,8 +90,7 @@ export default function App() {
 
   const handleFilesSelected = async (files: File[]) => {
     try {
-      setError(null);
-      setAppState('parsing');
+      setState(prev => ({ ...prev, error: null, status: 'parsing' }));
       
       const messages = await parseFiles(files);
       
@@ -87,25 +98,29 @@ export default function App() {
         throw new Error("Could not find any messages in the provided files. Please ensure they are valid Instagram export files.");
       }
 
-      setRawMessages(messages);
-      setAppState('generating');
+      setState(prev => ({ ...prev, rawMessages: messages, status: 'generating' }));
       
-      const memoryData = await generateMemories(messages, customApiKey, selectedModel);
+      const memoryData = await generateMemories(messages, state.customApiKey, state.selectedModel);
       
-      setMemories(memoryData);
-      setAppState('success');
+      setState(prev => ({ ...prev, memories: memoryData, status: 'success' }));
     } catch (err) {
       console.error(err);
-      setError(err instanceof Error ? err.message : "An unknown error occurred");
-      setAppState('error');
+      setState(prev => ({ 
+        ...prev, 
+        error: err instanceof Error ? err.message : "An unknown error occurred", 
+        status: 'error' 
+      }));
     }
   };
 
   const reset = () => {
-    setAppState('idle');
-    setMemories(null);
-    setRawMessages([]);
-    setError(null);
+    setState(prev => ({
+      ...prev,
+      status: 'idle',
+      memories: null,
+      rawMessages: [],
+      error: null,
+    }));
   };
 
   return (
@@ -158,7 +173,7 @@ export default function App() {
         {/* Main Content Area */}
         <main className="flex-grow flex flex-col items-center justify-center">
           <AnimatePresence mode="wait">
-            {appState === 'idle' && (
+            {state.status === 'idle' && (
               <motion.div
                 key="idle"
                 initial={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -194,15 +209,15 @@ export default function App() {
                 
                 <div className="mt-12 text-center">
                   <button 
-                    onClick={() => setShowAdvanced(!showAdvanced)} 
+                    onClick={() => setState(prev => ({ ...prev, showAdvanced: !prev.showAdvanced }))} 
                     className="text-sm text-gray-500 font-bold hover:text-purple-600 transition-all flex items-center justify-center mx-auto space-x-2 bg-white/40 hover:bg-white/80 px-4 py-2 rounded-full border border-white/40"
                   >
-                    <span>{showAdvanced ? 'Hide Settings' : 'Advanced Settings'}</span>
-                    <motion.span animate={{ rotate: showAdvanced ? 180 : 0 }}>↓</motion.span>
+                    <span>{state.showAdvanced ? 'Hide Settings' : 'Advanced Settings'}</span>
+                    <motion.span animate={{ rotate: state.showAdvanced ? 180 : 0 }}>↓</motion.span>
                   </button>
                   
                   <AnimatePresence>
-                    {showAdvanced && (
+                    {state.showAdvanced && (
                       <motion.div 
                         initial={{ opacity: 0, height: 0, y: 10 }}
                         animate={{ opacity: 1, height: 'auto', y: 0 }}
@@ -213,8 +228,8 @@ export default function App() {
                           <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Gemini API Key (Optional)</label>
                           <input 
                             type="password" 
-                            value={customApiKey} 
-                            onChange={e => setCustomApiKey(e.target.value)} 
+                            value={state.customApiKey} 
+                            onChange={e => setState(prev => ({ ...prev, customApiKey: e.target.value }))} 
                             placeholder="AIzaSy..."
                             className="w-full px-5 py-3 rounded-2xl border border-gray-100 focus:ring-4 focus:ring-purple-500/10 focus:border-purple-500 outline-none bg-white/50 transition-all font-medium"
                           />
@@ -225,8 +240,8 @@ export default function App() {
                         <div>
                           <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">AI Model Strategy</label>
                           <select 
-                            value={selectedModel} 
-                            onChange={e => setSelectedModel(e.target.value)}
+                            value={state.selectedModel} 
+                            onChange={e => setState(prev => ({ ...prev, selectedModel: e.target.value }))}
                             className="w-full px-5 py-3 rounded-2xl border border-gray-100 focus:ring-4 focus:ring-purple-500/10 focus:border-purple-500 outline-none bg-white/50 transition-all font-bold text-gray-700"
                           >
                             <option value="gemini-flash-latest">Gemini Flash (Latest)</option>
@@ -241,7 +256,7 @@ export default function App() {
               </motion.div>
             )}
 
-            {(appState === 'parsing' || appState === 'generating') && (
+            {(state.status === 'parsing' || state.status === 'generating') && (
               <motion.div
                 key="loading"
                 initial={{ opacity: 0, scale: 0.9 }}
@@ -250,12 +265,12 @@ export default function App() {
                 transition={{ type: "spring", stiffness: 200, damping: 20 }}
               >
                 <LoadingState 
-                  status={appState === 'parsing' ? "Reading your chat history..." : "AI is analyzing your journey..."} 
+                  status={state.status === 'parsing' ? "Reading your chat history..." : "AI is analyzing your journey..."} 
                 />
               </motion.div>
             )}
 
-            {appState === 'success' && memories && (
+            {state.status === 'success' && state.memories && (
               <motion.div
                 key="success"
                 initial={{ opacity: 0, y: 40 }}
@@ -263,7 +278,12 @@ export default function App() {
                 transition={{ type: "spring", stiffness: 100, damping: 20 }}
                 className="w-full"
               >
-                <Memories data={memories} messages={rawMessages} customApiKey={customApiKey} selectedModel={selectedModel} />
+                <Memories 
+                  data={state.memories} 
+                  messages={state.rawMessages} 
+                  customApiKey={state.customApiKey} 
+                  selectedModel={state.selectedModel} 
+                />
                 
                 <motion.div 
                   initial={{ opacity: 0 }}
@@ -281,7 +301,7 @@ export default function App() {
               </motion.div>
             )}
 
-            {appState === 'error' && (
+            {state.status === 'error' && (
               <motion.div
                 key="error"
                 initial={{ opacity: 0, y: 20 }}
@@ -292,7 +312,7 @@ export default function App() {
                   <Sparkles size={32} />
                 </div>
                 <h3 className="text-2xl font-black mb-3 text-red-900">Something went wrong</h3>
-                <p className="font-medium text-red-700/80 leading-relaxed">{error}</p>
+                <p className="font-medium text-red-700/80 leading-relaxed">{state.error}</p>
                 <button 
                   onClick={reset}
                   className="mt-8 px-8 py-3 bg-red-600 text-white rounded-full font-bold hover:bg-red-700 transition-colors shadow-lg shadow-red-500/30"
@@ -307,4 +327,3 @@ export default function App() {
     </motion.div>
   );
 }
-

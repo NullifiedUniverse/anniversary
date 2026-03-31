@@ -26,6 +26,14 @@ export async function parseFiles(files: File[]): Promise<ChatMessage[]> {
     .sort((a, b) => a.timestamp - b.timestamp);
 }
 
+function decodeIGString(str: string): string {
+  try {
+    return decodeURIComponent(escape(str));
+  } catch (e) {
+    return str;
+  }
+}
+
 function parseJson(text: string): ChatMessage[] {
   try {
     const data = JSON.parse(text);
@@ -49,8 +57,8 @@ function parseJson(text: string): ChatMessage[] {
     if (rawMessages) {
       for (const msg of rawMessages) {
         // Handle different possible key names (IG changes them occasionally)
-        const sender = msg.sender_name || msg.sender;
-        const content = msg.content || msg.text || msg.share?.link || msg.media?.uri;
+        const sender = decodeIGString(msg.sender_name || msg.sender || "");
+        const content = decodeIGString(msg.content || msg.text || msg.share?.link || msg.media?.uri || "");
         const timestamp = msg.timestamp_ms || msg.timestamp || (msg.created_at ? new Date(msg.created_at).getTime() : null);
 
         if (sender && content && timestamp) {

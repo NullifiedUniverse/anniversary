@@ -46,13 +46,16 @@ export function QuotesSection({
 
   const formatName = (name: string) => {
     if (!name) return "Unknown";
+    const lowerName = name.toLowerCase();
+    if (lowerName.includes('nullifiedgalaxy')) return "Null";
+    if (lowerName.includes('vanessa')) return "Yun";
     const cleanName = name.split(/_|(?=[A-Z])/)[0];
     return cleanName.charAt(0).toUpperCase() + cleanName.slice(1);
   };
 
   return (
     <motion.div 
-      id="highlights" // Re-using ID for nav, but should probably be unified
+      id="moments" 
       initial="hidden" 
       whileInView="show" 
       viewport={{ once: true, margin: "-100px" }}
@@ -62,8 +65,8 @@ export function QuotesSection({
       {/* Memorable Quotes */}
       <section>
         <div className="text-center mb-16">
-          <h2 className="text-5xl font-black text-gray-900 mb-4">Memorable Quotes</h2>
-          <p className="text-xl text-gray-500">Words that stuck with you.</p>
+          <h2 className="text-5xl font-black text-gray-900 mb-4">Our Echoes</h2>
+          <p className="text-xl text-pink-500 italic">The words that linger in our hearts.</p>
         </div>
         <div className="space-y-16">
           {quotes.map((quote, index) => {
@@ -129,8 +132,8 @@ export function QuotesSection({
       {/* Communication Insights */}
       <section>
         <div className="text-center mb-16">
-          <h2 className="text-5xl font-black text-gray-900 mb-4">Communication Insights</h2>
-          <p className="text-xl text-gray-500">How you connect on a deeper level.</p>
+          <h2 className="text-5xl font-black text-gray-900 mb-4">Our Connection</h2>
+          <p className="text-xl text-pink-500 italic">How we connect on a deeper level.</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {insights.map((insight, index) => (
@@ -156,8 +159,8 @@ export function QuotesSection({
       {/* Inside Jokes */}
       <section>
         <div className="text-center mb-16">
-          <h2 className="text-5xl font-black text-gray-900 mb-4">Inside Jokes</h2>
-          <p className="text-xl text-gray-500">Things only the two of you understand.</p>
+          <h2 className="text-5xl font-black text-gray-900 mb-4">Shared Smiles</h2>
+          <p className="text-xl text-pink-500 italic">Things only the two of you understand.</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {jokes.map((joke, index) => (
