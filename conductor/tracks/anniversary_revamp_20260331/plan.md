@@ -31,5 +31,8 @@
 ## Phase 6: Final Cinematic Polish & Deployment
 - [x] Task: Add Gemini Flash Lite Option (Update App.tsx selection)
 - [x] Task: Evocative Text Overhaul (Poetic copy across all components)
-- [~] Task: Compile & Final Push (Verify build and push to GitHub)
-- [ ] Task: Conductor - User Manual Verification 'Phase 6' (Protocol in workflow.md)
+- [x] Task: Compile & Final Push (Verify build and push to GitHub)
+- [x] Task: Conductor - User Manual Verification 'Phase 6' (Protocol in workflow.md)
+
+## Phase: Review Fixes
+- [x] Task: Apply review suggestions (8e4748e)
