@@ -1,7 +1,7 @@
 # Implementation Plan: Phase 2 - Comprehensive Feature Audit, UI/UX Polish, and Performance Optimization
 
 ## Phase 1: Indexing & Structural Audit
-- [ ] Task: Comprehensive Codebase Indexing
+- [~] Task: Comprehensive Codebase Indexing
     - [ ] Create a detailed dependency map of the `src/` directory.
     - [ ] Audit `App.tsx` and `Memories.tsx` for prop-drilling and state-sharing optimizations.
 - [ ] Task: Audit Data Pipeline & Scripts
