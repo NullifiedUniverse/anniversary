@@ -22,7 +22,7 @@ export function StorySection({ data }: StorySectionProps) {
       id="story"
       initial="hidden" 
       whileInView="show" 
-      viewport={{ once: true, margin: "-100px" }}
+      viewport={{ once: true, margin: "0px" }}
       variants={{
         hidden: { opacity: 0, y: 50 },
         show: { opacity: 1, y: 0, transition: { duration: 1, staggerChildren: 0.2 } }
@@ -49,7 +49,7 @@ export function StorySection({ data }: StorySectionProps) {
         <div className="flex flex-col items-center justify-center space-y-6 mb-20">
           <div className="p-5 bg-amber-500/10 rounded-full border border-amber-500/20"><Calendar className="w-10 h-10 text-amber-400" /></div>
           <h3 className="text-5xl font-black text-white tracking-tighter">The First Spark</h3>
-          <p className="text-xl text-gray-500 font-bold tracking-[0.3em] uppercase">Where our journey began</p>
+          <p className="text-xl text-gray-400 font-bold tracking-[0.3em] uppercase">Where our journey began</p>
         </div>
         
         <motion.div 
@@ -73,7 +73,7 @@ export function StorySection({ data }: StorySectionProps) {
           </div>
           
           <div className="flex flex-col space-y-4">
-            <div className="text-xs font-black tracking-[0.4em] text-gray-600 uppercase ml-6">
+            <div className="text-xs font-black tracking-[0.4em] text-gray-500 uppercase ml-6">
               {formatName(data.firstMessage.sender)} spoke first...
             </div>
             <div className="relative">

@@ -15,7 +15,7 @@ function StatCard({ icon, title, value, tooltip, delay = 0 }: { icon: React.Reac
     <motion.div 
       initial={{ opacity: 0, y: 30 }}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
+      viewport={{ once: true, margin: "0px" }}
       transition={{ delay, duration: 0.8 }}
       className="relative bg-white/[0.03] backdrop-blur-3xl p-12 rounded-[4rem] border border-white/10 flex flex-col items-center justify-center text-center group hover:bg-white/[0.08] transition-all duration-700 shadow-2xl"
       onMouseEnter={() => setIsHovered(true)}
@@ -63,13 +63,14 @@ export function StatsSection({ data }: StatsSectionProps) {
   return (
     <div id="stats" className="space-y-24 max-w-[1400px] mx-auto pt-20 px-4">
       <div className="text-center space-y-8">
-        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} className="inline-flex items-center space-x-3 bg-indigo-500/10 text-indigo-400 px-6 py-2.5 rounded-full text-[10px] font-black border border-indigo-500/20 uppercase tracking-[0.3em]">
+        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ margin: "0px" }} className="inline-flex items-center space-x-3 bg-indigo-500/10 text-indigo-400 px-6 py-2.5 rounded-full text-[10px] font-black border border-indigo-500/20 uppercase tracking-[0.3em]">
           <Zap size={14} className="fill-indigo-400" />
           <span>The Frequency of Us</span>
         </motion.div>
         <motion.h2 
           initial={{ opacity: 0, scale: 0.95 }}
           whileInView={{ opacity: 1, scale: 1 }}
+          viewport={{ margin: "0px" }}
           transition={{ duration: 1 }}
           className="text-7xl md:text-9xl font-black text-white tracking-tighter leading-none"
         >
@@ -78,8 +79,9 @@ export function StatsSection({ data }: StatsSectionProps) {
         <motion.p 
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
+          viewport={{ margin: "0px" }}
           transition={{ delay: 0.3 }}
-          className="text-2xl md:text-3xl text-gray-500 font-medium italic tracking-wide max-w-3xl mx-auto"
+          className="text-2xl md:text-3xl text-gray-400 font-medium italic tracking-wide max-w-3xl mx-auto"
         >
           Mapping the heartbeat of every late-night talk and early-morning smile.
         </motion.p>
@@ -95,6 +97,7 @@ export function StatsSection({ data }: StatsSectionProps) {
         <motion.div 
           initial={{ opacity: 0, x: -40 }}
           whileInView={{ opacity: 1, x: 0 }}
+          viewport={{ margin: "0px" }}
           transition={{ duration: 1 }}
           className="lg:col-span-3 bg-white/[0.02] backdrop-blur-3xl rounded-[5rem] p-16 border border-white/10 shadow-2xl relative overflow-hidden group flex flex-col justify-between"
         >
@@ -134,6 +137,7 @@ export function StatsSection({ data }: StatsSectionProps) {
         <motion.div 
           initial={{ opacity: 0, x: 40 }}
           whileInView={{ opacity: 1, x: 0 }}
+          viewport={{ margin: "0px" }}
           transition={{ duration: 1 }}
           className="lg:col-span-2 bg-white/[0.02] backdrop-blur-3xl rounded-[5rem] p-16 border border-white/10 shadow-2xl flex flex-col"
         >

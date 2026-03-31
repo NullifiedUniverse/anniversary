@@ -82,8 +82,8 @@ export function Memories({ data, messages, customApiKey, selectedModel }: Memori
   };
 
   const sectionVariants = {
-    hidden: { opacity: 0, y: 40 },
-    show: { opacity: 1, y: 0, transition: { duration: 1, ease: [0.16, 1, 0.3, 1] } }
+    hidden: { opacity: 0, y: 30 },
+    show: { opacity: 1, y: 0, transition: { duration: 0.8, ease: "easeOut" } }
   };
 
   return (
@@ -96,7 +96,7 @@ export function Memories({ data, messages, customApiKey, selectedModel }: Memori
         transition={{ type: "spring", stiffness: 100, damping: 30, delay: 1 }}
         className="fixed bottom-10 left-1/2 -translate-x-1/2 z-50 w-[calc(100vw-2rem)] max-w-4xl flex justify-center pointer-events-none"
       >
-        <div className="bg-black/40 backdrop-blur-3xl border border-white/10 p-2 rounded-full shadow-[0_20px_50px_rgba(0,0,0,0.5)] flex items-center gap-1 pointer-events-auto overflow-x-auto no-scrollbar max-w-full">
+        <div className="bg-black/60 backdrop-blur-3xl border border-white/10 p-2 rounded-full shadow-[0_20px_50px_rgba(0,0,0,0.5)] flex items-center gap-1 pointer-events-auto overflow-x-auto no-scrollbar max-w-full">
           {tabs.map((tab) => {
             const isActive = activeSection === tab.id;
             return (
@@ -104,7 +104,7 @@ export function Memories({ data, messages, customApiKey, selectedModel }: Memori
                 key={tab.id}
                 onClick={() => scrollToSection(tab.id)}
                 className={`relative group flex items-center gap-2 px-6 py-3 rounded-full transition-all duration-500 ${
-                  isActive ? 'text-white' : 'text-gray-500 hover:text-gray-300'
+                  isActive ? 'text-white' : 'text-gray-400 hover:text-gray-200'
                 }`}
               >
                 {isActive && (
@@ -129,22 +129,22 @@ export function Memories({ data, messages, customApiKey, selectedModel }: Memori
       {/* Page Content */}
       <div className="flex flex-col space-y-32 py-24">
         
-        <motion.div ref={sectionRefs.story} initial="hidden" whileInView="show" viewport={{ once: true, margin: "-50px" }} variants={sectionVariants}>
+        <motion.div ref={sectionRefs.story} initial="hidden" whileInView="show" viewport={{ once: true, margin: "0px" }} variants={sectionVariants}>
           <MemoriesHeader participants={data.participants} vibe={data.vibe} />
           <div className="mt-24">
             <StorySection data={data} />
           </div>
         </motion.div>
 
-        <motion.div ref={sectionRefs.stats} initial="hidden" whileInView="show" viewport={{ once: true, margin: "-50px" }} variants={sectionVariants}>
+        <motion.div ref={sectionRefs.stats} initial="hidden" whileInView="show" viewport={{ once: true, margin: "0px" }} variants={sectionVariants}>
           <StatsSection data={data} />
         </motion.div>
 
-        <motion.div ref={sectionRefs.words} initial="hidden" whileInView="show" viewport={{ once: true, margin: "-50px" }} variants={sectionVariants}>
+        <motion.div ref={sectionRefs.words} initial="hidden" whileInView="show" viewport={{ once: true, margin: "0px" }} variants={sectionVariants}>
           <WordCloudSection data={data} />
         </motion.div>
 
-        <motion.div ref={sectionRefs.highlights} initial="hidden" whileInView="show" viewport={{ once: true, margin: "-50px" }} variants={sectionVariants} className="space-y-32">
+        <motion.div ref={sectionRefs.highlights} initial="hidden" whileInView="show" viewport={{ once: true, margin: "0px" }} variants={sectionVariants} className="space-y-32">
           <HighlightsSection 
             highlights={highlights}
             milestones={milestones}
@@ -167,7 +167,7 @@ export function Memories({ data, messages, customApiKey, selectedModel }: Memori
           />
         </motion.div>
 
-        <motion.div ref={sectionRefs.future} initial="hidden" whileInView="show" viewport={{ once: true, margin: "-50px" }} variants={sectionVariants}>
+        <motion.div ref={sectionRefs.future} initial="hidden" whileInView="show" viewport={{ once: true, margin: "0px" }} variants={sectionVariants}>
           <FutureSection 
             adventures={futureAdventures}
             superlatives={superlatives}
@@ -178,7 +178,7 @@ export function Memories({ data, messages, customApiKey, selectedModel }: Memori
           />
         </motion.div>
 
-        <motion.div ref={sectionRefs.explore} initial="hidden" whileInView="show" viewport={{ once: true, margin: "-50px" }} variants={sectionVariants}>
+        <motion.div ref={sectionRefs.explore} initial="hidden" whileInView="show" viewport={{ once: true, margin: "0px" }} variants={sectionVariants}>
           <ExploreSection messages={messages} participants={data.participants} />
         </motion.div>
 
@@ -202,7 +202,7 @@ export function Memories({ data, messages, customApiKey, selectedModel }: Memori
           <h2 className="text-8xl md:text-[10rem] font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white via-white to-gray-500 mb-8 leading-none">
             Forever<br/>Begins.
           </h2>
-          <p className="text-2xl md:text-3xl text-gray-500 font-medium tracking-[0.2em] uppercase max-w-2xl mx-auto">
+          <p className="text-2xl md:text-3xl text-gray-400 font-medium tracking-[0.2em] uppercase max-w-2xl mx-auto">
             Happy Anniversary, Null & Yun.
           </p>
         </motion.div>

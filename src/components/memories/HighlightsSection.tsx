@@ -32,11 +32,11 @@ export function HighlightsSection({
   }, [milestonesInView]);
 
   return (
-    <div id="highlights" className="max-w-[1400px] mx-auto space-y-64 px-4">
+    <div id="highlights" className="max-w-[1400px] mx-auto space-y-32 px-4">
       {/* Milestones - Cinematic Timeline */}
       <section>
         <div className="text-center mb-32 space-y-6">
-          <motion.div initial={{ scale: 0 }} whileInView={{ scale: 1 }} className="inline-flex items-center justify-center p-5 bg-purple-500/10 rounded-3xl mb-6 border border-purple-500/20 shadow-2xl">
+          <motion.div initial={{ scale: 0 }} whileInView={{ scale: 1 }} viewport={{ margin: "0px" }} className="inline-flex items-center justify-center p-5 bg-purple-500/10 rounded-3xl mb-6 border border-purple-500/20 shadow-2xl">
             <Milestone className="w-10 h-10 text-purple-400" />
           </motion.div>
           <h2 className="text-7xl font-black text-white tracking-tighter">Our Milestones</h2>
@@ -49,6 +49,7 @@ export function HighlightsSection({
               key={i} 
               initial={{ opacity: 0, y: 40 }}
               whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ margin: "0px" }}
               transition={{ duration: 0.8 }}
               className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group"
             >
@@ -71,7 +72,7 @@ export function HighlightsSection({
       {/* Highlights - Premium Masonry-like Grid */}
       <section>
         <div className="text-center mb-32 space-y-6">
-          <motion.div initial={{ scale: 0 }} whileInView={{ scale: 1 }} className="inline-flex items-center justify-center p-5 bg-pink-500/10 rounded-3xl mb-6 border border-pink-500/20 shadow-2xl">
+          <motion.div initial={{ scale: 0 }} whileInView={{ scale: 1 }} viewport={{ margin: "0px" }} className="inline-flex items-center justify-center p-5 bg-pink-500/10 rounded-3xl mb-6 border border-pink-500/20 shadow-2xl">
             <Star className="w-10 h-10 text-pink-400" />
           </motion.div>
           <h2 className="text-7xl font-black text-white tracking-tighter">Brightest Moments</h2>
@@ -84,6 +85,7 @@ export function HighlightsSection({
               key={i}
               initial={{ opacity: 0, scale: 0.95 }}
               whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ margin: "0px" }}
               whileHover={{ y: -12, scale: 1.02 }}
               transition={{ duration: 0.6 }}
               className="bg-white/5 backdrop-blur-3xl p-16 rounded-[5rem] shadow-2xl border border-white/10 group transition-all duration-700 hover:bg-white/[0.08] hover:border-pink-500/30"

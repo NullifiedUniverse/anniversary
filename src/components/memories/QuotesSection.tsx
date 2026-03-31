@@ -50,7 +50,7 @@ export function QuotesSection({
       {/* Cinematic Quotes */}
       <section>
         <div className="text-center mb-32 space-y-6">
-          <motion.div initial={{ scale: 0 }} whileInView={{ scale: 1 }} className="inline-flex items-center justify-center p-5 bg-indigo-500/10 rounded-3xl mb-6 border border-indigo-500/20 shadow-2xl">
+          <motion.div initial={{ scale: 0 }} whileInView={{ scale: 1 }} viewport={{ margin: "0px" }} className="inline-flex items-center justify-center p-5 bg-indigo-500/10 rounded-3xl mb-6 border border-indigo-500/20 shadow-2xl">
             <Quote className="w-10 h-10 text-indigo-400" />
           </motion.div>
           <h2 className="text-7xl font-black text-white tracking-tighter">Our Echoes</h2>
@@ -60,14 +60,13 @@ export function QuotesSection({
         <div className="space-y-32">
           {quotes.map((quote, index) => {
             const isP1 = quote.sender === participants[0];
-            const words = quote.text.split(' ');
             
             return (
               <motion.div 
                 key={index} 
                 initial={{ opacity: 0, y: 60 }} 
                 whileInView={{ opacity: 1, y: 0 }} 
-                viewport={{ once: true, margin: "-100px" }}
+                viewport={{ once: true, margin: "0px" }}
                 transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
                 className={`flex flex-col ${isP1 ? 'items-start' : 'items-end'} w-full relative`}
               >
@@ -107,7 +106,7 @@ export function QuotesSection({
       {/* Connection Insights */}
       <section>
         <div className="text-center mb-32 space-y-6">
-          <motion.div initial={{ scale: 0 }} whileInView={{ scale: 1 }} className="inline-flex items-center justify-center p-5 bg-amber-500/10 rounded-3xl mb-6 border border-amber-500/20 shadow-2xl">
+          <motion.div initial={{ scale: 0 }} whileInView={{ scale: 1 }} viewport={{ margin: "0px" }} className="inline-flex items-center justify-center p-5 bg-amber-500/10 rounded-3xl mb-6 border border-amber-500/20 shadow-2xl">
             <TrendingUp className="w-10 h-10 text-amber-400" />
           </motion.div>
           <h2 className="text-7xl font-black text-white tracking-tighter">Our Pulse</h2>
@@ -120,6 +119,7 @@ export function QuotesSection({
               key={i} 
               initial={{ opacity: 0, scale: 0.95 }}
               whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ margin: "0px" }}
               whileHover={{ y: -12, scale: 1.02 }}
               className="bg-white/5 backdrop-blur-3xl p-16 rounded-[4rem] border border-white/10 group transition-all duration-700"
             >
@@ -139,7 +139,7 @@ export function QuotesSection({
       {/* Shared Smiles */}
       <section>
         <div className="text-center mb-32 space-y-6">
-          <motion.div initial={{ scale: 0 }} whileInView={{ scale: 1 }} className="inline-flex items-center justify-center p-5 bg-pink-500/10 rounded-3xl mb-6 border border-pink-500/20 shadow-2xl">
+          <motion.div initial={{ scale: 0 }} whileInView={{ scale: 1 }} viewport={{ margin: "0px" }} className="inline-flex items-center justify-center p-5 bg-pink-500/10 rounded-3xl mb-6 border border-pink-500/20 shadow-2xl">
             <span className="text-5xl">🤭</span>
           </motion.div>
           <h2 className="text-7xl font-black text-white tracking-tighter">Hidden Languages</h2>
@@ -152,6 +152,7 @@ export function QuotesSection({
               key={i}
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ margin: "0px" }}
               whileHover={{ y: -8 }}
               className="bg-white/5 backdrop-blur-2xl p-12 rounded-[3rem] border border-white/5 shadow-2xl group transition-all duration-500"
             >

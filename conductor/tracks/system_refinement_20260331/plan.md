@@ -9,7 +9,7 @@
     - [x] Implement: Update `text-gray-600` and `opacity-50` usage in `QuotesSection` and `StatsSection`.
     - [x] Implement: Refine tab bar `max-width` and centering for large screens.
     - [x] Implement: Add `min-h` and aspect ratio stability to Recharts containers.
-- [x] Task: Implement Initial Model Switcher UI (154c848)
+- [x] Task: Implement Initial Model Switcher UI (0f68a4d)
     - [x] Implement: Basic model selection in `App.tsx`.
 - [ ] Task: Conductor - User Manual Verification 'Phase 1' (Protocol in workflow.md)
 

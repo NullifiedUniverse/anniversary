@@ -38,7 +38,7 @@ export function ExploreSection({ messages, participants }: ExploreSectionProps) 
       id="explore"
       initial="hidden" 
       whileInView="show" 
-      viewport={{ once: true, margin: "-100px" }}
+      viewport={{ once: true, margin: "0px" }}
       variants={{ hidden: { opacity: 0 }, show: { opacity: 1 } }}
       className="max-w-5xl mx-auto space-y-16 py-20"
     >

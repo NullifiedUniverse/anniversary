@@ -22,7 +22,7 @@ export function MemoriesHeader({ participants, vibe }: MemoriesHeaderProps) {
     <motion.div 
       initial="hidden" 
       whileInView="show" 
-      viewport={{ once: true, margin: "-100px" }}
+      viewport={{ once: true, margin: "0px" }}
       variants={{
         hidden: { opacity: 0, y: 50 },
         show: { opacity: 1, y: 0, transition: { duration: 1.2, staggerChildren: 0.3 } }
