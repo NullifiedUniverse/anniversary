@@ -1,13 +1,13 @@
 # Implementation Plan: Anniversary Revamp & Redesign Phase 1
 
-## Phase 1: Personalization & Aesthetic Foundation
+## Phase 1: Personalization & Aesthetic Foundation [checkpoint: 5f3f9a2]
 - [x] Task: Inject "Null & Yun" Branding and Romantic Theme (3207c95)
     - [ ] Update `product-guidelines.md` principles into a global CSS/Tailwind theme.
     - [ ] Redesign `MemoriesHeader.tsx` with a romantic first-anniversary theme.
 - [x] Task: Refine AI Narrative Prompts for Emotional Depth (51729af)
     - [ ] Update `src/lib/gemini.ts` prompts to be more "sweet and romantic."
     - [ ] Test narrative generation with sample Null & Yun chat data.
-- [ ] Task: Conductor - User Manual Verification 'Phase 1' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 1' (Protocol in workflow.md) (5f3f9a2)
 
 ## Phase 2: UI/UX & Interaction Revamp
 - [ ] Task: Redesign Relationship Stats as "Our Rhythm"
