@@ -1,17 +1,36 @@
 import { ChatMessage } from "./parser";
 
+// Explicitly define the logger to avoid any runtime errors
 const logger = {
-  info: (msg: string, data?: any) => console.log(`[Gemini Pipeline] ℹ️ ${msg}`, data || ''),
-  error: (msg: string, err?: any) => console.error(`[Gemini Pipeline] ❌ ${msg}`, err || ''),
-  success: (msg: string) => console.log(`[Gemini Pipeline] ✅ ${msg}`)
+  info: (msg: string, data?: any) => {
+    console.log(`[Gemini Pipeline] ℹ️ ${msg}`, data || '');
+  },
+  error: (msg: string, err?: any) => {
+    console.error(`[Gemini Pipeline] ❌ ${msg}`, err || '');
+  },
+  success: (msg: string) => {
+    console.log(`[Gemini Pipeline] ✅ ${msg}`);
+  }
 };
 
 export interface MemoryData {
   participants: string[];
   summary: string;
-  firstMessage: { date: string; sender: string; text: string; };
-  stats: { totalMessages: number; mostActivePerson: string; topEmojis: string[]; };
-  extendedStats: { messagesByHour: Record<number, number>; topWords: { word: string; count: number }[]; avgResponseTime: Record<string, number>; };
+  firstMessage: {
+    date: string;
+    sender: string;
+    text: string;
+  };
+  stats: {
+    totalMessages: number;
+    mostActivePerson: string;
+    topEmojis: string[];
+  };
+  extendedStats: {
+    messagesByHour: Record<number, number>;
+    topWords: { word: string; count: number }[];
+    avgResponseTime: Record<string, number>;
+  };
   highlights: { title: string; description: string }[];
   memorableQuotes: { sender: string; text: string; context: string }[];
   insideJokes: { joke: string; origin: string }[];
@@ -27,7 +46,8 @@ const PROXY_URL = '/api/analyze';
 export async function generateMemories(
   messages: ChatMessage[], 
   apiKey: string, 
-  modelName: string = 'gemini-2.0-flash'
+  modelName: string = 'gemini-2.0-flash',
+  ollamaEndpoint?: string
 ): Promise<MemoryData> {
   if (messages.length === 0) throw new Error("No messages to analyze");
 
@@ -40,12 +60,12 @@ export async function generateMemories(
   if (messages.length <= 500) {
     sampledMessages.push(...messages);
   } else {
-    sampledMessages.push(...messages.slice(0, 100));
+    sampledMessages.push(...messages.slice(0, 100)); // Start
     const step = Math.floor((messages.length - 200) / 300);
     for (let i = 0; i < 300; i++) {
       sampledMessages.push(messages[100 + i * step]);
     }
-    sampledMessages.push(...messages.slice(-100));
+    sampledMessages.push(...messages.slice(-100)); // End
   }
 
   const sampledTranscript = sampledMessages
@@ -66,11 +86,11 @@ export async function generateMemories(
   const prompt = `You are a romantic storyteller. Analyze this chat history for ${p1} and ${p2}'s anniversary. Create a romantic summary. Use their names. Transcript:\n${sampledTranscript}`;
 
   try {
-    logger.info("Awaiting response from Integrated REST Proxy...");
+    logger.info("Awaiting response from Integrated AI Proxy...");
     const response = await fetch(PROXY_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt, modelName, apiKey: apiKey.trim() })
+      body: JSON.stringify({ prompt, modelName, apiKey: apiKey.trim(), ollamaEndpoint })
     });
 
     if (!response.ok) {
@@ -109,8 +129,16 @@ export async function generateMemories(
         sender: messages[0].sender,
         text: messages[0].content
       },
-      stats: { totalMessages: messages.length, mostActivePerson, topEmojis: [] },
-      extendedStats: { messagesByHour, topWords, avgResponseTime: {} }
+      stats: {
+        totalMessages: messages.length,
+        mostActivePerson,
+        topEmojis: []
+      },
+      extendedStats: {
+        messagesByHour,
+        topWords,
+        avgResponseTime: {}
+      }
     };
   } catch (e) {
     logger.error("Integrated Analysis Failure", e);
@@ -123,7 +151,8 @@ export async function generateMoreItems(
   category: string,
   existingItems: any[],
   apiKey: string,
-  modelName: string = 'gemini-2.0-flash'
+  modelName: string = 'gemini-2.0-flash',
+  ollamaEndpoint?: string
 ) {
   if (messages.length === 0) return [];
   try {
@@ -133,7 +162,7 @@ export async function generateMoreItems(
     const response = await fetch(PROXY_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt, modelName, apiKey: apiKey.trim() })
+      body: JSON.stringify({ prompt, modelName, apiKey: apiKey.trim(), ollamaEndpoint })
     });
 
     if (!response.ok) throw new Error("Integrated Proxy Error");

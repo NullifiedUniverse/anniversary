@@ -27,7 +27,7 @@ export function StorySection({ data }: StorySectionProps) {
         hidden: { opacity: 0, y: 50 },
         show: { opacity: 1, y: 0, transition: { duration: 1, staggerChildren: 0.2 } }
       }}
-      className="space-y-48 relative z-10"
+      className="space-y-24 relative z-10"
     >
       {/* Narrative Summary */}
       <motion.div 

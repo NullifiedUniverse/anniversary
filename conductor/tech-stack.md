@@ -8,7 +8,8 @@
 - **Visualizations:** [Recharts](https://recharts.org/)
 
 ## 🧠 AI & Logic
-- **Model:** [Google Gemini API](https://deepmind.google/technologies/gemini/) (using `@google/genai`)
+- **Primary Model:** [Google Gemini API](https://deepmind.google/technologies/gemini/) (using `@google/genai`)
+- **Local Alternative:** [Ollama](https://ollama.com/) (Direct REST API integration for local LLM usage)
 - **Parsing:** Custom client-side HTML/JSON parsers for Instagram chat data.
 - **State Management:** React 19 concurrent features and local state.
 

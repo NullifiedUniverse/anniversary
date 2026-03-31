@@ -46,7 +46,7 @@ export function QuotesSection({
   };
 
   return (
-    <div id="moments" className="max-w-[1400px] mx-auto space-y-64 px-4 pb-20">
+    <div id="moments" className="max-w-[1400px] mx-auto space-y-32 px-4 pb-20">
       {/* Cinematic Quotes */}
       <section>
         <div className="text-center mb-32 space-y-6">

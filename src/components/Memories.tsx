@@ -127,24 +127,24 @@ export function Memories({ data, messages, customApiKey, selectedModel }: Memori
       </motion.div>
 
       {/* Page Content */}
-      <div className="flex flex-col space-y-64 py-24">
+      <div className="flex flex-col space-y-32 py-24">
         
-        <motion.div ref={sectionRefs.story} initial="hidden" whileInView="show" viewport={{ once: true, margin: "-100px" }} variants={sectionVariants}>
+        <motion.div ref={sectionRefs.story} initial="hidden" whileInView="show" viewport={{ once: true, margin: "-50px" }} variants={sectionVariants}>
           <MemoriesHeader participants={data.participants} vibe={data.vibe} />
-          <div className="mt-32">
+          <div className="mt-24">
             <StorySection data={data} />
           </div>
         </motion.div>
 
-        <motion.div ref={sectionRefs.stats} initial="hidden" whileInView="show" viewport={{ once: true, margin: "-100px" }} variants={sectionVariants}>
+        <motion.div ref={sectionRefs.stats} initial="hidden" whileInView="show" viewport={{ once: true, margin: "-50px" }} variants={sectionVariants}>
           <StatsSection data={data} />
         </motion.div>
 
-        <motion.div ref={sectionRefs.words} initial="hidden" whileInView="show" viewport={{ once: true, margin: "-100px" }} variants={sectionVariants}>
+        <motion.div ref={sectionRefs.words} initial="hidden" whileInView="show" viewport={{ once: true, margin: "-50px" }} variants={sectionVariants}>
           <WordCloudSection data={data} />
         </motion.div>
 
-        <motion.div ref={sectionRefs.highlights} initial="hidden" whileInView="show" viewport={{ once: true, margin: "-100px" }} variants={sectionVariants} className="space-y-64">
+        <motion.div ref={sectionRefs.highlights} initial="hidden" whileInView="show" viewport={{ once: true, margin: "-50px" }} variants={sectionVariants} className="space-y-32">
           <HighlightsSection 
             highlights={highlights}
             milestones={milestones}
@@ -167,7 +167,7 @@ export function Memories({ data, messages, customApiKey, selectedModel }: Memori
           />
         </motion.div>
 
-        <motion.div ref={sectionRefs.future} initial="hidden" whileInView="show" viewport={{ once: true, margin: "-100px" }} variants={sectionVariants}>
+        <motion.div ref={sectionRefs.future} initial="hidden" whileInView="show" viewport={{ once: true, margin: "-50px" }} variants={sectionVariants}>
           <FutureSection 
             adventures={futureAdventures}
             superlatives={superlatives}
@@ -178,7 +178,7 @@ export function Memories({ data, messages, customApiKey, selectedModel }: Memori
           />
         </motion.div>
 
-        <motion.div ref={sectionRefs.explore} initial="hidden" whileInView="show" viewport={{ once: true, margin: "-100px" }} variants={sectionVariants}>
+        <motion.div ref={sectionRefs.explore} initial="hidden" whileInView="show" viewport={{ once: true, margin: "-50px" }} variants={sectionVariants}>
           <ExploreSection messages={messages} participants={data.participants} />
         </motion.div>
 

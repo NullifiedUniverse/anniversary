@@ -44,7 +44,7 @@ const Particles = () => {
       {particles.map((p, i) => (
         <motion.div
           key={i}
-          className="absolute rounded-full bg-pink-500/10 blur-[2px]"
+          className="absolute rounded-full bg-pink-500/10 blur-[1px]"
           style={{ width: p.width, height: p.width, left: `${p.left}%`, top: `${p.top}%` }}
           animate={{ y: [0, p.yOffset], x: [0, p.xOffset], opacity: [0, 0.3, 0], scale: [0, 1.5, 0.5] }}
           transition={{ duration: p.duration, repeat: Infinity, ease: "linear", delay: p.delay }}
@@ -61,10 +61,29 @@ export default function App() {
     rawMessages: [],
     error: null,
     customApiKey: localStorage.getItem('insta_memories_key') || '',
-    selectedModel: 'gemini-flash-latest',
-    ollamaEndpoint: 'http://localhost:11434',
+    selectedModel: localStorage.getItem('insta_memories_model') || 'gemini-flash-latest',
+    ollamaEndpoint: localStorage.getItem('insta_memories_ollama_endpoint') || 'http://localhost:11434',
     steps: INITIAL_STEPS,
   });
+
+  const [ollamaModels, setOllamaModels] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (state.selectedModel.startsWith('ollama') || state.status === 'setup') {
+      const fetchOllamaModels = async () => {
+        try {
+          const response = await fetch(`${state.ollamaEndpoint}/api/tags`);
+          if (response.ok) {
+            const data = await response.json();
+            setOllamaModels(data.models?.map((m: any) => m.name) || []);
+          }
+        } catch (e) {
+          // Silently fail if Ollama is not running
+        }
+      };
+      fetchOllamaModels();
+    }
+  }, [state.selectedModel, state.ollamaEndpoint, state.status]);
 
   const { scrollYProgress } = useScroll();
   const scaleX = useSpring(scrollYProgress, { stiffness: 100, damping: 30, restDelta: 0.001 });
@@ -80,15 +99,17 @@ export default function App() {
   const handleKeySubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const trimmedKey = state.customApiKey.trim();
-    if (trimmedKey) {
+    if (trimmedKey || state.selectedModel.startsWith('ollama')) {
       localStorage.setItem('insta_memories_key', trimmedKey);
+      localStorage.setItem('insta_memories_model', state.selectedModel);
+      localStorage.setItem('insta_memories_ollama_endpoint', state.ollamaEndpoint);
       setState(prev => ({ ...prev, status: 'idle', customApiKey: trimmedKey }));
     }
   };
 
   const runAnalysis = async (messages: ChatMessage[], apiKey: string, modelName: string) => {
     try {
-      console.log(`[App] 🚀 Commencing Analysis...`);
+      console.log(`[App] 🚀 Commencing Analysis Flow...`);
       setState(prev => ({ ...prev, status: 'analyzing', rawMessages: messages }));
       
       updateStep('load', 'complete');
@@ -199,17 +220,67 @@ export default function App() {
                 
                 <div className="space-y-4">
                   <h2 className="text-5xl font-black tracking-tight leading-tight text-white">Open the Vault</h2>
-                  <p className="text-xl text-gray-400 font-medium max-w-md mx-auto leading-relaxed">Provide your Gemini API Key to relive your shared history.</p>
+                  <p className="text-xl text-gray-400 font-medium max-w-md mx-auto leading-relaxed">Provide your Gemini API Key or use a local model to begin.</p>
                 </div>
                 
                 <form onSubmit={handleKeySubmit} className="space-y-8 max-w-md mx-auto">
-                  <input 
-                    type="password" 
-                    placeholder="ENTER KEY" 
-                    value={state.customApiKey}
-                    onChange={e => setState(prev => ({ ...prev, customApiKey: e.target.value }))}
-                    className="w-full px-8 py-6 bg-black/40 border border-white/10 rounded-3xl text-gray-100 placeholder-gray-700 focus:ring-4 focus:ring-pink-500/20 focus:border-pink-500 outline-none transition-all font-black tracking-[0.5em] text-center"
-                  />
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-center space-x-3">
+                      {[
+                        { id: 'gemini-flash-latest', label: 'Flash' },
+                        { id: 'gemini-pro-latest', label: 'Pro' },
+                        { id: 'ollama', label: 'Ollama' }
+                      ].map(model => (
+                        <button 
+                          key={model.id}
+                          type="button"
+                          onClick={() => setState(prev => ({ ...prev, selectedModel: model.id }))}
+                          className={`px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all ${
+                            (state.selectedModel === model.id || (model.id === 'ollama' && state.selectedModel.startsWith('ollama'))) 
+                              ? 'bg-white text-black border-white' 
+                              : 'bg-transparent text-gray-500 border-gray-800 hover:border-gray-600'
+                          }`}
+                        >
+                          {model.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    {state.selectedModel !== 'ollama' && !state.selectedModel.startsWith('ollama') ? (
+                      <input 
+                        type="password" 
+                        placeholder="ENTER GEMINI KEY" 
+                        value={state.customApiKey}
+                        onChange={e => setState(prev => ({ ...prev, customApiKey: e.target.value }))}
+                        className="w-full px-8 py-6 bg-black/40 border border-white/10 rounded-3xl text-gray-100 placeholder-gray-700 focus:ring-4 focus:ring-pink-500/20 focus:border-pink-500 outline-none transition-all font-black tracking-[0.5em] text-center"
+                      />
+                    ) : (
+                      <div className="space-y-4">
+                        <input 
+                          type="text" 
+                          placeholder="OLLAMA ENDPOINT" 
+                          value={state.ollamaEndpoint}
+                          onChange={e => setState(prev => ({ ...prev, ollamaEndpoint: e.target.value }))}
+                          className="w-full px-8 py-4 bg-black/40 border border-white/10 rounded-2xl text-gray-100 placeholder-gray-700 focus:ring-4 focus:ring-pink-500/20 focus:border-pink-500 outline-none transition-all font-bold text-center"
+                        />
+                        {ollamaModels.length > 0 ? (
+                          <select 
+                            className="w-full px-8 py-4 bg-black/40 border border-white/10 rounded-2xl text-gray-100 focus:ring-4 focus:ring-pink-500/20 focus:border-pink-500 outline-none transition-all font-bold"
+                            value={state.selectedModel.startsWith('ollama:') ? state.selectedModel : ''}
+                            onChange={e => setState(prev => ({ ...prev, selectedModel: e.target.value }))}
+                          >
+                            <option value="">Select a local model...</option>
+                            {ollamaModels.map(m => (
+                              <option key={m} value={`ollama:${m}`}>{m}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">No local models found. Ensure Ollama is running.</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
                   <button type="submit" className="group relative w-full py-6 bg-white text-black rounded-3xl font-black text-xl overflow-hidden transition-all hover:shadow-[0_0_40px_rgba(255,255,255,0.2)] active:scale-[0.98]">
                     <span className="relative z-10 flex items-center justify-center space-x-2">
                       <span>Begin the Journey</span>
@@ -244,41 +315,8 @@ export default function App() {
                 
                 <div className="flex flex-col items-center space-y-6 pt-12">
                   <button onClick={() => setState(prev => ({ ...prev, status: 'setup' }))} className="text-[10px] text-gray-500 font-black hover:text-pink-400 transition-colors uppercase tracking-[0.4em]">
-                    Manage Access Key
+                    Manage Access Key & Model
                   </button>
-                  <div className="flex flex-col items-center space-y-4">
-                    <div className="flex items-center space-x-4">
-                      {[
-                        { id: 'gemini-flash-latest', label: 'Flash' },
-                        { id: 'gemini-flash-lite-latest', label: 'Lite' },
-                        { id: 'gemini-pro-latest', label: 'Pro' },
-                        { id: 'ollama', label: 'Local (Ollama)' }
-                      ].map(model => (
-                        <button 
-                          key={model.id}
-                          onClick={() => setState(prev => ({ ...prev, selectedModel: model.id }))}
-                          className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border transition-all ${
-                            state.selectedModel === model.id 
-                              ? 'bg-white text-black border-white' 
-                              : 'bg-transparent text-gray-500 border-gray-800 hover:border-gray-600'
-                          }`}
-                        >
-                          {model.label}
-                        </button>
-                      ))}
-                    </div>
-                    {state.selectedModel === 'ollama' && (
-                      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-xs">
-                        <input 
-                          type="text" 
-                          placeholder="Ollama Endpoint (e.g., http://localhost:11434)" 
-                          value={state.ollamaEndpoint}
-                          onChange={e => setState(prev => ({ ...prev, ollamaEndpoint: e.target.value }))}
-                          className="w-full px-4 py-2 bg-black/20 border border-white/5 rounded-xl text-[10px] text-gray-400 font-bold text-center outline-none focus:border-pink-500/50 transition-colors"
-                        />
-                      </motion.div>
-                    )}
-                  </div>
                 </div>
               </motion.div>
             )}

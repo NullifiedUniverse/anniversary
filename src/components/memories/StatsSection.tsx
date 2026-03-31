@@ -61,7 +61,7 @@ export function StatsSection({ data }: StatsSectionProps) {
   }));
 
   return (
-    <div id="stats" className="space-y-48 max-w-[1400px] mx-auto pt-20 px-4">
+    <div id="stats" className="space-y-24 max-w-[1400px] mx-auto pt-20 px-4">
       <div className="text-center space-y-8">
         <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} className="inline-flex items-center space-x-3 bg-indigo-500/10 text-indigo-400 px-6 py-2.5 rounded-full text-[10px] font-black border border-indigo-500/20 uppercase tracking-[0.3em]">
           <Zap size={14} className="fill-indigo-400" />
