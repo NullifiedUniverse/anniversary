@@ -19,10 +19,6 @@
 - [x] Task: Conductor - User Manual Verification 'Phase 2' (Protocol in workflow.md) (c926cff)
 
 ## Phase 3: Quality & Refinement
-- [ ] Task: Architectural Audit & Refactor
-    - [ ] Audit `App.tsx` for state management improvements.
-    - [ ] Remove redundant code and ensure strict TypeScript compliance.
-- [ ] Task: Bug Fixes & Edge Case Handling
-    - [ ] Address any identified parsing bugs in `parser.ts`.
-    - [ ] Final visual polish and cross-browser testing.
+- [x] Task: Architectural Audit & Refactor (7e9cdb9)
+- [x] Task: Bug Fixes & Edge Case Handling (0314e2c)
 - [ ] Task: Conductor - User Manual Verification 'Phase 3' (Protocol in workflow.md)
