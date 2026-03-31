@@ -10,12 +10,13 @@ interface MemoriesHeaderProps {
 
 export function MemoriesHeader({ participants, vibe }: MemoriesHeaderProps) {
   const formatName = (name: string) => {
-    // Basic formatting: remove common suffixes and handle known ones
-    // But mostly just capitalize or take the first part
     if (!name) return "Unknown";
     
-    // Custom logic for known users can be added here if needed, 
-    // but let's be more generic.
+    // Personalized nicknames for Null and Yun
+    const lowerName = name.toLowerCase();
+    if (lowerName.includes('nullifiedgalaxy')) return "Null";
+    if (lowerName.includes('vanessa')) return "Yun";
+    
     const cleanName = name.split(/_|(?=[A-Z])/)[0];
     return cleanName.charAt(0).toUpperCase() + cleanName.slice(1);
   };
@@ -29,19 +30,33 @@ export function MemoriesHeader({ participants, vibe }: MemoriesHeaderProps) {
         hidden: { opacity: 0, y: 50 },
         show: { opacity: 1, y: 0, transition: { duration: 0.8, staggerChildren: 0.2 } }
       }}
-      className="space-y-24 relative pt-12"
+      className="space-y-12 relative pt-12 pb-8"
     >
       <SectionParticles />
-      <div className="text-center space-y-8 relative z-10">
+      <div className="text-center space-y-6 relative z-10">
         <motion.div 
           initial={{ scale: 0, rotate: -180 }} 
           animate={{ scale: 1, rotate: 0 }} 
           transition={{ type: "spring", bounce: 0.6, duration: 1.5 }}
-          className="inline-flex items-center justify-center p-6 bg-gradient-to-br from-pink-100 to-purple-100 rounded-full mb-4 shadow-inner"
+          className="inline-flex items-center justify-center p-6 bg-gradient-to-br from-pink-100 to-purple-100 rounded-full mb-2 shadow-sm"
         >
-          <Heart className="w-16 h-16 text-pink-500 fill-pink-500" />
+          <Heart role="img" aria-label="Heart icon" className="w-16 h-16 text-pink-500 fill-pink-500" />
         </motion.div>
         
+        <div className="space-y-2">
+          <motion.p 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="text-pink-400 font-bold tracking-widest uppercase text-sm"
+          >
+            Celebrating Our
+          </motion.p>
+          <h1 className="text-4xl md:text-6xl font-black text-gray-900 tracking-tight">
+            1st Anniversary
+          </h1>
+        </div>
+
         <h2 className="text-5xl md:text-7xl font-black tracking-tight text-gray-900 leading-tight">
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-500">
             {formatName(participants[0])}
@@ -61,7 +76,7 @@ export function MemoriesHeader({ participants, vibe }: MemoriesHeaderProps) {
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.8, duration: 0.5 }}
         >
-          <p className="text-3xl text-gray-500 font-medium italic tracking-wide">
+          <p className="text-2xl md:text-3xl text-gray-500 font-medium italic tracking-wide max-w-2xl mx-auto">
             "{vibe}"
           </p>
         </motion.div>
