@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { FileUpload } from './components/FileUpload';
 import { Memories } from './components/Memories';
 import { LoadingState, LoadingStep } from './components/LoadingState';
-import { parseFiles, ChatMessage } from './lib/parser';
+import { parseFiles, ChatMessage, SeedMemories } from './lib/parser';
 import { generateMemories, MemoryData } from './lib/gemini';
 import { motion, AnimatePresence, useScroll, useTransform, useSpring } from 'motion/react';
 import { Instagram, Sparkles, Heart, Key, CheckCircle2, AlertCircle } from 'lucide-react';
@@ -13,6 +13,7 @@ interface AppState {
   status: AppStatus;
   memories: MemoryData | null;
   rawMessages: ChatMessage[];
+  seeds: SeedMemories | null;
   error: string | null;
   customApiKey: string;
   selectedModel: string;
@@ -59,9 +60,10 @@ export default function App() {
     status: 'setup',
     memories: null,
     rawMessages: [],
+    seeds: null,
     error: null,
     customApiKey: localStorage.getItem('insta_memories_key') || '',
-    selectedModel: localStorage.getItem('insta_memories_model') || 'gemini-3-flash-preview',
+    selectedModel: localStorage.getItem('insta_memories_model') || 'gemini-2.0-flash',
     ollamaEndpoint: localStorage.getItem('insta_memories_ollama_endpoint') || 'http://localhost:11434',
     steps: INITIAL_STEPS,
   });
@@ -100,13 +102,13 @@ export default function App() {
     e.preventDefault();
     const trimmedKey = state.customApiKey.trim();
     const isOllama = state.selectedModel.startsWith('ollama');
-
+    
     if (trimmedKey || isOllama) {
       if (isOllama && state.selectedModel === 'ollama') {
         alert("Please select a specific local model from the dropdown.");
         return;
       }
-
+      
       localStorage.setItem('insta_memories_key', trimmedKey);
       localStorage.setItem('insta_memories_model', state.selectedModel);
       localStorage.setItem('insta_memories_ollama_endpoint', state.ollamaEndpoint);
@@ -116,37 +118,37 @@ export default function App() {
     }
   };
 
-  const runAnalysis = async (messages: ChatMessage[], apiKey: string, modelName: string, ollamaEndpoint: string) => {
+  const runAnalysis = async (messages: ChatMessage[], seeds: SeedMemories | null, apiKey: string, modelName: string, ollamaEndpoint: string) => {
     try {
-      console.log(`[App] 🚀 Commencing Analysis Flow... | Model: ${modelName || 'gemini-3.1-flash-lite-preview'}`);
-      const actualModel = modelName || 'gemini-3.1-flash-lite-preview';
-
-      setState(prev => ({ ...prev, status: 'analyzing', rawMessages: messages }));
-
+      console.log(`[App] 🚀 Commencing Analysis Flow... | Model: ${modelName || 'gemini-2.0-flash'}`);
+      const actualModel = modelName || 'gemini-2.0-flash';
+      
+      setState(prev => ({ ...prev, status: 'analyzing', rawMessages: messages, seeds }));
+      
       updateStep('load', 'complete');
       updateStep('parse', 'loading');
       await new Promise(r => setTimeout(r, 1000));
       updateStep('parse', 'complete');
-
+      
       updateStep('sample', 'loading');
       await new Promise(r => setTimeout(r, 800));
       updateStep('sample', 'complete');
-
+      
       updateStep('ai', 'loading');
-      const memoryData = await generateMemories(messages, apiKey, actualModel, ollamaEndpoint);
-
+      const memoryData = await generateMemories(messages, apiKey, actualModel, ollamaEndpoint, seeds);
+      
       updateStep('ai', 'complete');
       updateStep('render', 'loading');
       await new Promise(r => setTimeout(r, 1200));
       updateStep('render', 'complete');
-
+      
       setState(prev => ({ ...prev, memories: memoryData, status: 'success' }));
     } catch (err) {
       console.error("[App] ❌ Analysis Failure:", err);
-      setState(prev => ({
-        ...prev,
-        error: err instanceof Error ? err.message : "The story encountered a chapter it couldn't read.",
-        status: 'error'
+      setState(prev => ({ 
+        ...prev, 
+        error: err instanceof Error ? err.message : "The story encountered a chapter it couldn't read.", 
+        status: 'error' 
       }));
     }
   };
@@ -157,9 +159,11 @@ export default function App() {
         try {
           const response = await fetch('/pre-parsed-data.json');
           if (response.ok) {
-            const messages = await response.json();
-            if (messages?.length > 0) {
-              await runAnalysis(messages, state.customApiKey, state.selectedModel, state.ollamaEndpoint);
+            const data = await response.json();
+            if (data?.messages) {
+              await runAnalysis(data.messages, data.seeds || null, state.customApiKey, state.selectedModel, state.ollamaEndpoint);
+            } else if (Array.isArray(data)) {
+              await runAnalysis(data, null, state.customApiKey, state.selectedModel, state.ollamaEndpoint);
             }
           }
         } catch (e) {
@@ -173,9 +177,9 @@ export default function App() {
   const handleFilesSelected = async (files: File[]) => {
     try {
       setState(prev => ({ ...prev, error: null, status: 'analyzing', steps: INITIAL_STEPS }));
-      const messages = await parseFiles(files);
+      const { messages, seeds } = await parseFiles(files);
       if (messages.length === 0) throw new Error("No memories were found in those files.");
-      runAnalysis(messages, state.customApiKey, state.selectedModel, state.ollamaEndpoint);
+      runAnalysis(messages, seeds, state.customApiKey, state.selectedModel, state.ollamaEndpoint);
     } catch (err) {
       setState(prev => ({ ...prev, error: err instanceof Error ? err.message : "The messages couldn't be traced.", status: 'error' }));
     }
@@ -187,6 +191,7 @@ export default function App() {
       status: 'idle',
       memories: null,
       rawMessages: [],
+      seeds: null,
       error: null,
       steps: INITIAL_STEPS,
     }));
@@ -208,7 +213,7 @@ export default function App() {
               <span className="text-xs font-bold uppercase tracking-[0.3em] text-pink-500 mt-1 opacity-80 italic">A Love Story in Data</span>
             </div>
           </div>
-
+          
           <div className="hidden lg:flex items-center space-x-6 text-gray-400 font-bold bg-white/5 backdrop-blur-3xl px-8 py-3 rounded-full border border-white/10 shadow-2xl">
             <div className="flex items-center space-x-2">
               <Sparkles size={18} className="text-amber-400 animate-pulse" />
@@ -227,28 +232,29 @@ export default function App() {
                   </div>
                   <Heart className="absolute -top-4 -right-4 text-pink-500 fill-pink-500 animate-bounce" size={24} />
                 </div>
-
+                
                 <div className="space-y-4">
                   <h2 className="text-5xl font-black tracking-tight leading-tight text-white">Open the Vault</h2>
                   <p className="text-xl text-gray-400 font-medium max-w-md mx-auto leading-relaxed">Provide your Gemini API Key or use a local model to begin.</p>
                 </div>
-
+                
                 <form onSubmit={handleKeySubmit} className="space-y-8 max-w-md mx-auto">
                   <div className="space-y-6">
                     <div className="flex items-center justify-center space-x-3">
                       {[
-                        { id: 'gemini-3.1-flash-lite-preview', label: 'Flash' },
-                        { id: 'gemini-3.1-pro-preview', label: 'Pro' },
+                        { id: 'gemini-2.0-flash', label: 'Flash' },
+                        { id: 'gemini-1.5-pro', label: 'Pro' },
                         { id: 'ollama', label: 'Ollama' }
                       ].map(model => (
-                        <button
+                        <button 
                           key={model.id}
                           type="button"
                           onClick={() => setState(prev => ({ ...prev, selectedModel: model.id }))}
-                          className={`px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all ${(state.selectedModel === model.id || (model.id === 'ollama' && state.selectedModel.startsWith('ollama')))
-                            ? 'bg-white text-black border-white'
-                            : 'bg-transparent text-gray-500 border-gray-800 hover:border-gray-600'
-                            }`}
+                          className={`px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all ${
+                            (state.selectedModel === model.id || (model.id === 'ollama' && state.selectedModel.startsWith('ollama'))) 
+                              ? 'bg-white text-black border-white' 
+                              : 'bg-transparent text-gray-500 border-gray-800 hover:border-gray-600'
+                          }`}
                         >
                           {model.label}
                         </button>
@@ -256,24 +262,24 @@ export default function App() {
                     </div>
 
                     {state.selectedModel !== 'ollama' && !state.selectedModel.startsWith('ollama') ? (
-                      <input
-                        type="password"
-                        placeholder="ENTER GEMINI KEY"
+                      <input 
+                        type="password" 
+                        placeholder="ENTER GEMINI KEY" 
                         value={state.customApiKey}
                         onChange={e => setState(prev => ({ ...prev, customApiKey: e.target.value }))}
                         className="w-full px-8 py-6 bg-black/40 border border-white/10 rounded-3xl text-gray-100 placeholder-gray-700 focus:ring-4 focus:ring-pink-500/20 focus:border-pink-500 outline-none transition-all font-black tracking-[0.5em] text-center"
                       />
                     ) : (
                       <div className="space-y-4">
-                        <input
-                          type="text"
-                          placeholder="OLLAMA ENDPOINT"
+                        <input 
+                          type="text" 
+                          placeholder="OLLAMA ENDPOINT" 
                           value={state.ollamaEndpoint}
                           onChange={e => setState(prev => ({ ...prev, ollamaEndpoint: e.target.value }))}
                           className="w-full px-8 py-4 bg-black/40 border border-white/10 rounded-2xl text-gray-100 placeholder-gray-700 focus:ring-4 focus:ring-pink-500/20 focus:border-pink-500 outline-none transition-all font-bold text-center"
                         />
                         {ollamaModels.length > 0 ? (
-                          <select
+                          <select 
                             className="w-full px-8 py-4 bg-black/40 border border-white/10 rounded-2xl text-gray-100 focus:ring-4 focus:ring-pink-500/20 focus:border-pink-500 outline-none transition-all font-bold"
                             value={state.selectedModel.startsWith('ollama:') ? state.selectedModel : ''}
                             onChange={e => setState(prev => ({ ...prev, selectedModel: e.target.value }))}
@@ -297,7 +303,7 @@ export default function App() {
                     </span>
                   </button>
                 </form>
-
+                
                 <p className="text-sm text-gray-500 font-medium italic opacity-60">Private. Secure. For your eyes only.</p>
               </motion.div>
             )}
@@ -310,7 +316,7 @@ export default function App() {
                     <span>Memory Vault Authenticated</span>
                   </div>
                   <h1 className="text-7xl md:text-9xl font-black tracking-tighter leading-[0.9] text-white">
-                    Relive every<br />
+                    Relive every<br/>
                     <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-pink-400 to-amber-300">
                       soulful moment
                     </span>
@@ -319,9 +325,9 @@ export default function App() {
                     Transforming 370,000+ messages into your first year together.
                   </p>
                 </div>
-
+                
                 <FileUpload onFilesSelected={handleFilesSelected} />
-
+                
                 <div className="flex flex-col items-center space-y-6 pt-12">
                   <button onClick={() => setState(prev => ({ ...prev, status: 'setup' }))} className="text-[10px] text-gray-500 font-black hover:text-pink-400 transition-colors uppercase tracking-[0.4em]">
                     Manage Access Key & Model

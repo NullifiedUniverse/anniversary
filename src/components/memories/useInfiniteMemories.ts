@@ -7,13 +7,15 @@ export function useInfiniteMemories(
   messages: ChatMessage[],
   customApiKey?: string,
   selectedModel?: string,
-  ollamaEndpoint?: string
+  ollamaEndpoint?: string,
+  seeds?: any
 ) {
-  const [quotes, setQuotes] = useState(data.memorableQuotes || []);
+  // Initialize with seeds if provided, otherwise fallback to initial AI data
+  const [quotes, setQuotes] = useState(seeds?.quotes?.length > 0 ? seeds.quotes : (data.memorableQuotes || []));
   const [insights, setInsights] = useState(data.communicationInsights || []);
   const [jokes, setJokes] = useState(data.insideJokes || []);
   const [highlights, setHighlights] = useState(data.highlights || []);
-  const [milestones, setMilestones] = useState(data.milestones || []);
+  const [milestones, setMilestones] = useState(seeds?.milestones?.length > 0 ? seeds.milestones : (data.milestones || []));
   const [futureAdventures, setFutureAdventures] = useState(data.futureAdventures || []);
   const [superlatives, setSuperlatives] = useState(data.superlatives || []);
 
@@ -27,7 +29,6 @@ export function useInfiniteMemories(
     superlatives: false,
   });
 
-  // Sequential queue management
   const queue = useRef<string[]>([]);
   const isProcessing = useRef(false);
   const lastRequestTime = useRef(0);
@@ -37,7 +38,6 @@ export function useInfiniteMemories(
 
     isProcessing.current = true;
     
-    // Ensure at least 1.5s between requests to avoid 429s
     const now = Date.now();
     const timeSinceLast = now - lastRequestTime.current;
     if (timeSinceLast < 1500) {
@@ -84,15 +84,12 @@ export function useInfiniteMemories(
       lastRequestTime.current = Date.now();
       setLoading(prev => ({ ...prev, [category]: false }));
       isProcessing.current = false;
-      // Process next in queue
       setTimeout(processQueue, 100);
     }
   };
 
   const generateMore = (category: keyof typeof loading) => {
-    // Don't add to queue if already loading or already in queue
     if (loading[category] || queue.current.includes(String(category)) || messages.length === 0) return;
-
     queue.current.push(String(category));
     processQueue();
   };

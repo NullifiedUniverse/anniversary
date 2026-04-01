@@ -17,12 +17,13 @@ import { ExploreSection } from './memories/ExploreSection';
 interface MemoriesProps {
   data: MemoryData;
   messages: ChatMessage[];
+  seeds: any | null;
   customApiKey?: string;
   selectedModel?: string;
   ollamaEndpoint?: string;
 }
 
-export function Memories({ data, messages, customApiKey, selectedModel, ollamaEndpoint }: MemoriesProps) {
+export function Memories({ data, messages, seeds, customApiKey, selectedModel, ollamaEndpoint }: MemoriesProps) {
   const [activeSection, setActiveSection] = useState<string>('story');
   
   const {
@@ -35,7 +36,7 @@ export function Memories({ data, messages, customApiKey, selectedModel, ollamaEn
     superlatives,
     loading,
     generateMore
-  } = useInfiniteMemories(data, messages, customApiKey, selectedModel, ollamaEndpoint);
+  } = useInfiniteMemories(data, messages, customApiKey, selectedModel, ollamaEndpoint, seeds);
 
   const sectionRefs = {
     story: useRef<HTMLDivElement>(null),

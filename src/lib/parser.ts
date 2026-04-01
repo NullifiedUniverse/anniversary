@@ -4,7 +4,13 @@ export interface ChatMessage {
   content: string;
 }
 
-export async function parseFiles(files: File[]): Promise<ChatMessage[]> {
+export interface SeedMemories {
+  quotes: { sender: string; text: string; timestamp: number }[];
+  milestones: { date: string; messageCount: number; sampleText: string }[];
+  words: { word: string; count: number }[];
+}
+
+export async function parseFiles(files: File[]): Promise<{ messages: ChatMessage[], seeds: SeedMemories }> {
   let allMessages: ChatMessage[] = [];
 
   for (const file of files) {
@@ -30,7 +36,6 @@ export async function parseFiles(files: File[]): Promise<ChatMessage[]> {
   const uniqueMessages: ChatMessage[] = [];
 
   for (const msg of sorted) {
-    // Round timestamp to nearest second to handle minor variations between exports
     const secondTs = Math.floor(msg.timestamp / 1000) * 1000;
     const key = `${msg.sender}-${secondTs}-${msg.content}`;
     if (!seen.has(key)) {
@@ -39,7 +44,62 @@ export async function parseFiles(files: File[]): Promise<ChatMessage[]> {
     }
   }
 
-  return uniqueMessages;
+  // SEED EXTRACTION
+  const seeds = extractSeeds(uniqueMessages);
+
+  return { messages: uniqueMessages, seeds };
+}
+
+function extractSeeds(messages: ChatMessage[]): SeedMemories {
+  // 1. Find potential romantic/meaningful quotes (long messages with emotional keywords)
+  const emotionalKeywords = ['love', 'miss', 'always', 'forever', 'happy', 'thank', 'beautiful', 'wonderful', 'special', 'sorry', 'promise'];
+  const potentialQuotes = messages
+    .filter(m => m.content.length > 40 && m.content.length < 300)
+    .filter(m => emotionalKeywords.some(word => m.content.toLowerCase().includes(word)))
+    .slice(-50) // Take from recent half primarily
+    .sort(() => 0.5 - Math.random()) // Randomize
+    .slice(0, 10)
+    .map(m => ({ sender: m.sender, text: m.content, timestamp: m.timestamp }));
+
+  // 2. Find Milestones (High volume days)
+  const dayCounts: Record<string, { count: number, sample: string }> = {};
+  messages.forEach(m => {
+    const date = new Date(m.timestamp).toLocaleDateString();
+    if (!dayCounts[date]) dayCounts[date] = { count: 0, sample: m.content };
+    dayCounts[date].count++;
+    if (m.content.length > dayCounts[date].sample.length) dayCounts[date].sample = m.content;
+  });
+
+  const milestones = Object.entries(dayCounts)
+    .sort((a, b) => b[1].count - a[1].count)
+    .slice(0, 10)
+    .map(([date, data]) => ({
+      date,
+      messageCount: data.count,
+      sampleText: data.sample
+    }));
+
+  // 3. Top Words (excluding common ones)
+  const stopWords = new Set(['the', 'and', 'that', 'this', 'with', 'from', 'have', 'your', 'will', 'just', 'they', 'their', 'what', 'about', 'know', 'like', 'there', 'would', 'think', 'more', 'when', 'which', 'who', 'how', 'time', 'up', 'out', 'into', 'over', 'after']);
+  const wordCounts: Record<string, number> = {};
+  messages.slice(-5000).forEach(m => {
+    m.content.split(/\s+/).forEach(word => {
+      const w = word.toLowerCase().replace(/[^\w]/g, '');
+      if (w.length > 3 && !stopWords.has(w)) {
+        wordCounts[w] = (wordCounts[w] || 0) + 1;
+      }
+    });
+  });
+  const topWords = Object.entries(wordCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 50)
+    .map(([word, count]) => ({ word, count }));
+
+  return {
+    quotes: potentialQuotes,
+    milestones,
+    words: topWords
+  };
 }
 
 function decodeIGString(str: string): string {
@@ -55,8 +115,6 @@ function parseJson(text: string): ChatMessage[] {
     const data = JSON.parse(text);
     const messages: ChatMessage[] = [];
 
-    // Instagram JSON format usually has a "messages" array
-    // It can be top-level or nested under some keys
     const findMessages = (obj: any): any[] | null => {
       if (obj && Array.isArray(obj.messages)) return obj.messages;
       if (typeof obj === 'object' && obj !== null) {
@@ -72,7 +130,6 @@ function parseJson(text: string): ChatMessage[] {
 
     if (rawMessages) {
       for (const msg of rawMessages) {
-        // Handle different possible key names (IG changes them occasionally)
         const sender = decodeIGString(msg.sender_name || msg.sender || "");
         const content = decodeIGString(msg.content || msg.text || msg.share?.link || msg.media?.uri || "");
         const timestamp = msg.timestamp_ms || msg.timestamp || (msg.created_at ? new Date(msg.created_at).getTime() : null);
@@ -98,13 +155,10 @@ function parseHtml(text: string): ChatMessage[] {
   try {
     const parser = new DOMParser();
     const doc = parser.parseFromString(text, 'text/html');
-    
-    // Strategy 1: Look for modern IG HTML export structure (divs with specific classes)
     const messageBlocks = doc.querySelectorAll('.pam, ._3-95, ._2pi0, .uiBoxWhite');
     
     if (messageBlocks.length > 0) {
       messageBlocks.forEach(block => {
-        // Try to find sender, content, and timestamp within the block
         const sender = block.querySelector('h2, ._3-96, ._2pio, ._2lek, ._2lel')?.textContent?.trim();
         const content = block.querySelector('._3-95._a6-p, ._3-96._2let, ._2let, div > div > div:nth-child(2)')?.textContent?.trim();
         const timestampStr = block.querySelector('._3-94, ._2lem, ._a3sc')?.textContent?.trim();
@@ -118,17 +172,12 @@ function parseHtml(text: string): ChatMessage[] {
       });
     }
 
-    // Strategy 2: If Strategy 1 failed or missed messages, try a more generic approach
     if (messages.length === 0) {
-      // Look for message containers that usually have a sender name in bold or specific heading
       const allDivs = Array.from(doc.querySelectorAll('div'));
-      
       for (let i = 0; i < allDivs.length; i++) {
         const div = allDivs[i];
-        // Common pattern: Sender name is often in a div followed by content and then a date
         if (div.children.length === 0 && div.textContent?.trim()) {
           const text = div.textContent.trim();
-          // Heuristic: If it's a short string (likely a name) and the next sibling is longer
           if (text.length > 0 && text.length < 50) {
             const nextDiv = div.nextElementSibling;
             const dateDiv = nextDiv?.nextElementSibling;
@@ -140,7 +189,7 @@ function parseHtml(text: string): ChatMessage[] {
               
               if (content && !isNaN(timestamp)) {
                 messages.push({ sender: text, content, timestamp });
-                i += 2; // Skip the next two divs since we used them
+                i += 2;
               }
             }
           }
@@ -154,4 +203,3 @@ function parseHtml(text: string): ChatMessage[] {
     return [];
   }
 }
-

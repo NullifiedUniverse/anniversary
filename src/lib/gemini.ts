@@ -62,26 +62,21 @@ function cleanJson(text: string): string {
   return clean;
 }
 
-// INTELLIGENT SAMPLER: Picks random windows from the entire history
 function sampleMessages(messages: ChatMessage[], totalTarget: number = 800, windowSize: number = 100): ChatMessage[] {
   if (messages.length <= totalTarget) return messages;
 
   const result: ChatMessage[] = [];
   const numWindows = Math.floor(totalTarget / windowSize);
   
-  // Always include the very beginning
   result.push(...messages.slice(0, windowSize));
 
-  // Pick random windows from the middle
   for (let i = 0; i < numWindows - 2; i++) {
     const start = Math.floor(Math.random() * (messages.length - windowSize * 2)) + windowSize;
     result.push(...messages.slice(start, start + windowSize));
   }
 
-  // Always include the very end
   result.push(...messages.slice(-windowSize));
 
-  // Sort by timestamp to maintain relative flow
   return result.sort((a, b) => a.timestamp - b.timestamp);
 }
 
@@ -101,7 +96,8 @@ export async function generateMemories(
   messages: ChatMessage[], 
   apiKey: string, 
   modelName: string = 'gemini-2.0-flash',
-  ollamaEndpoint?: string
+  ollamaEndpoint?: string,
+  seeds?: any // Optional local seeds to speed up or initialize data
 ): Promise<MemoryData> {
   if (messages.length === 0) throw new Error("No messages to analyze");
 
@@ -130,6 +126,8 @@ export async function generateMemories(
   TASK: Analyze the provided transcript. The transcript contains random windows of their history.
   Extract a deep narrative and specific shared memories.
   
+  ${seeds ? `INITIAL DISCOVERIES (Enhance these): ${JSON.stringify(seeds)}` : ''}
+
   OUTPUT INSTRUCTIONS:
   - Respond with a SINGLE JSON OBJECT only.
   - "summary": A long, poetic 3-paragraph summary of their year (approx 200 words).
@@ -148,7 +146,7 @@ export async function generateMemories(
     "summary": "...",
     "vibe": "...",
     "highlights": [{"title": "...", "description": "..."}],
-    "memorableQuotes": [{"sender": "${participants[0]} or ${participants[1]}", "text": "...", "context": "..."}],
+    "memorableQuotes": [{"sender": "...", "text": "...", "context": "..."}],
     "insideJokes": [{"joke": "...", "origin": "..."}],
     "milestones": [{"title": "...", "description": "...", "date": "..."}],
     "futureAdventures": [{"title": "...", "description": "..."}],
@@ -216,14 +214,7 @@ export async function generateMemories(
       messagesByHour[hour] = (messagesByHour[hour] || 0) + 1;
     });
 
-    const wordCounts: Record<string, number> = {};
-    messages.slice(-2000).forEach(m => {
-      m.content.split(/\s+/).forEach(word => {
-        const w = word.toLowerCase().replace(/[^\w]/g, '');
-        if (w.length > 3) wordCounts[w] = (wordCounts[w] || 0) + 1;
-      });
-    });
-    const topWords = Object.entries(wordCounts).sort((a, b) => b[1] - a[1]).slice(0, 50).map(([word, count]) => ({ word, count }));
+    const topWords = seeds?.words || [];
 
     return {
       ...DEFAULT_MEMORY_DATA,
@@ -262,7 +253,6 @@ export async function generateMoreItems(
   if (messages.length === 0) return [];
 
   try {
-    // Pick a completely different random window for every infinite scroll call
     const sampledMessages = sampleMessages(messages, 600, 200);
     const sampledTranscript = sampledMessages.map(m => `[${m.sender}]: ${m.content}`).join('\n');
     
