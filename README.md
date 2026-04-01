@@ -30,6 +30,24 @@ We built InstaMemories using the latest bleeding-edge technologies to ensure a s
 - **Framer Motion**: Fluid, physics-based animations that make the UI feel alive.
 - **Google Gemini Latest**: Lightning-fast, intelligent analysis that understands nuance and emotion using future-proof model aliases.
 
+## 🏗️ Technical Architecture
+We take privacy and performance seriously. InstaMemories is built with a **Zero-Knowledge** architecture:
+- **Local Parsing**: Your data stays in your browser. We never see your chat logs.
+- **Smart Sampling**: Intelligent seed extraction ensures only the most meaningful moments are sent to the AI.
+- **Integrated AI Proxy**: Seamlessly handles communication with Gemini or your local Ollama instance.
+
+```mermaid
+graph LR
+    A[📂 Chat Data] --> B[⚙️ Parser]
+    B --> C[🧠 App State]
+    C --> D[🌐 AI Proxy]
+    D --> E[✨ AI Insights]
+    E --> F[🎨 Scapbook UI]
+```
+
+> [!TIP]
+> **Deep Dive:** Want to know how we turn raw JSON into soulful stories? Check out our [**Detailed Architecture Guide**](./ARCHITECTURE.md).
+
 ## 🔒 Privacy First
 Your story is yours alone. InstaMemories operates on a **Zero-Knowledge** architecture:
 - **Client-Side Parsing**: Your chat files never leave your computer. Everything is processed locally in your browser.
