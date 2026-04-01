@@ -1,4 +1,4 @@
-import React;
+import React from 'react';
 import { motion } from 'motion/react';
 import { Cloud } from 'lucide-react';
 import { MemoryData } from '../../lib/gemini';

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { MemoryData } from '../lib/gemini';
+import { MemoryData } from '../../lib/gemini';
 
 // Mock child components to simplify testing
 vi.mock('../memories/MemoriesHeader', () => ({ MemoriesHeader: () => <div data-testid="memories-header" /> }));

@@ -63,7 +63,7 @@ export function useInfiniteMemories(
         superlatives: { key: 'superlatives', state: superlatives, setter: setSuperlatives },
       };
 
-      const config = categoryMap[category];
+      const config = categoryMap[category as string];
       if (config) {
         const { key, state, setter } = config;
         const newItems = await generateMoreItems(

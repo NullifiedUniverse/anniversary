@@ -48,7 +48,7 @@ describe('App', () => {
 
   it('transitions to idle after entering key', async () => {
     render(<App />);
-    const input = await screen.findByPlaceholderText(/ENTER KEY/i);
+    const input = await screen.findByPlaceholderText(/ENTER GEMINI KEY/i);
     const submitBtn = screen.getByText(/Begin the Journey/i);
 
     fireEvent.change(input, { target: { value: 'test-key' } });
@@ -61,19 +61,26 @@ describe('App', () => {
 
   it('allows switching models including Ollama', async () => {
     render(<App />);
-    // Skip setup
-    fireEvent.change(await screen.findByPlaceholderText(/ENTER KEY/i), { target: { value: 'test-key' } });
+    
+    // Check model switcher in setup screen
+    const proBtn = await screen.findByRole('button', { name: /Pro/i });
+    fireEvent.click(proBtn);
+    
+    const ollamaBtn = await screen.findByRole('button', { name: /Ollama/i });
+    fireEvent.click(ollamaBtn);
+    
+    expect(await screen.findByPlaceholderText(/Ollama Endpoint/i)).toBeInTheDocument();
+
+    // Switch back to Flash to enter key
+    fireEvent.click(screen.getByRole('button', { name: /Flash/i }));
+
+    // Now proceed to idle
+    fireEvent.change(screen.getByPlaceholderText(/ENTER GEMINI KEY/i), { target: { value: 'test-key' } });
     await act(async () => {
       fireEvent.click(screen.getByText(/Begin the Journey/i));
     });
 
-    const liteBtn = await screen.findByText(/Lite/i);
-    fireEvent.click(liteBtn);
-    
-    const ollamaBtn = await screen.findByText(/Local \(Ollama\)/i);
-    fireEvent.click(ollamaBtn);
-    
-    expect(await screen.findByPlaceholderText(/Ollama Endpoint/i)).toBeInTheDocument();
+    expect(await screen.findByText(/soulful moment/i)).toBeInTheDocument();
   });
 
   it('handles errors during file processing', async () => {
@@ -81,7 +88,7 @@ describe('App', () => {
 
     render(<App />);
     // setup
-    fireEvent.change(await screen.findByPlaceholderText(/ENTER KEY/i), { target: { value: 'test-key' } });
+    fireEvent.change(await screen.findByPlaceholderText(/ENTER GEMINI KEY/i), { target: { value: 'test-key' } });
     await act(async () => {
       fireEvent.click(screen.getByText(/Begin the Journey/i));
     });

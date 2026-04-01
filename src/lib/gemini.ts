@@ -61,11 +61,10 @@ function cleanJson(text: string): string {
 export async function generateMemories(
   messages: ChatMessage[], 
   apiKey: string, 
-  modelName: string,
+  modelName: string = 'gemini-2.0-flash',
   ollamaEndpoint?: string
 ): Promise<MemoryData> {
   if (messages.length === 0) throw new Error("No messages to analyze");
-  if (!modelName) modelName = 'gemini-2.0-flash';
 
   logger.info(`Starting analysis: ${messages.length} messages using ${modelName}`);
 
@@ -212,11 +211,10 @@ export async function generateMoreItems(
   category: string,
   existingItems: any[],
   apiKey: string,
-  modelName: string,
+  modelName: string = 'gemini-2.0-flash',
   ollamaEndpoint?: string
 ) {
   if (messages.length === 0) return [];
-  if (!modelName) modelName = 'gemini-2.0-flash';
 
   try {
     const sampledTranscript = messages.slice(-200).map(m => `[${m.sender}]: ${m.content}`).join('\n');
