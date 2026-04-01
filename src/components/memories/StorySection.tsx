@@ -32,14 +32,21 @@ export function StorySection({ data }: StorySectionProps) {
       {/* Narrative Summary */}
       <motion.div 
         variants={{ hidden: { opacity: 0, scale: 0.98 }, show: { opacity: 1, scale: 1 } }}
-        className="max-w-[1000px] mx-auto p-16 md:p-24 bg-white/[0.02] backdrop-blur-3xl rounded-[5rem] shadow-[0_40px_100px_rgba(0,0,0,0.5)] border border-white/10 relative overflow-hidden group"
+        className="max-w-[1000px] mx-auto p-16 md:p-24 bg-white/[0.02] backdrop-blur-3xl rounded-[5rem] shadow-[0_40px_100px_rgba(0,0,0,0.5)] border border-white/10 relative overflow-hidden group min-h-[400px] flex items-center justify-center"
       >
         <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-indigo-500/5 via-transparent to-pink-500/5 pointer-events-none" />
         <Sparkles className="absolute top-12 left-12 text-indigo-500 opacity-20" size={40} />
         
-        <p className="text-3xl md:text-5xl text-gray-100 leading-[1.4] font-serif text-center relative z-10 drop-shadow-2xl">
-          {data.summary}
-        </p>
+        {data.summary ? (
+          <p className="text-3xl md:text-5xl text-gray-100 leading-[1.4] font-serif text-center relative z-10 drop-shadow-2xl whitespace-pre-wrap">
+            {data.summary}
+          </p>
+        ) : (
+          <div className="text-center space-y-6">
+             <div className="w-16 h-16 border-t-2 border-indigo-500 rounded-full animate-spin mx-auto" />
+             <p className="text-2xl text-gray-500 italic font-serif">Weaving our shared history into a narrative...</p>
+          </div>
+        )}
         
         <Sparkles className="absolute bottom-12 right-12 text-pink-500 opacity-20" size={40} />
       </motion.div>
@@ -57,29 +64,29 @@ export function StorySection({ data }: StorySectionProps) {
             hidden: { opacity: 0, y: 40 },
             show: { opacity: 1, y: 0, transition: { duration: 1.2, ease: [0.16, 1, 0.3, 1] } }
           }}
-          className="bg-gray-900/40 backdrop-blur-3xl rounded-[4rem] p-12 md:p-20 shadow-[0_40px_100px_rgba(0,0,0,0.6)] border border-white/5 flex flex-col space-y-12 relative overflow-hidden group"
+          className="bg-gray-900/40 backdrop-blur-3xl rounded-[4rem] p-12 md:p-20 shadow-[0_40px_100px_rgba(0,0,0,0.6)] border border-white/5 flex flex-col space-y-12 relative overflow-hidden group min-h-[300px]"
         >
           <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-gradient-to-bl from-amber-500/10 via-transparent to-transparent rounded-bl-full opacity-50 pointer-events-none transition-transform duration-1000 group-hover:scale-110" />
           
           <div className="text-center">
             <time className="text-2xl font-serif italic text-amber-400 drop-shadow-sm">
-              {new Date(data.firstMessage.date).toLocaleDateString(undefined, { 
+              {data.firstMessage?.date ? new Date(data.firstMessage.date).toLocaleDateString(undefined, { 
                 weekday: 'long', 
                 year: 'numeric', 
                 month: 'long', 
                 day: 'numeric' 
-              })}
+              }) : 'A special day in 2025'}
             </time>
           </div>
           
           <div className="flex flex-col space-y-4">
             <div className="text-xs font-black tracking-[0.4em] text-gray-500 uppercase ml-6">
-              {formatName(data.firstMessage.sender)} spoke first...
+              {data.firstMessage?.sender ? formatName(data.firstMessage.sender) : 'One of us'} spoke first...
             </div>
             <div className="relative">
               <div className="absolute -left-4 top-0 bottom-0 w-1 bg-gradient-to-b from-amber-500/50 to-transparent rounded-full" />
               <div className="bg-white/[0.03] backdrop-blur-md text-white px-12 py-10 rounded-[3rem] rounded-tl-xl text-3xl md:text-4xl shadow-2xl font-medium border border-white/10 italic leading-snug">
-                "{data.firstMessage.text}"
+                "{data.firstMessage?.text || 'Searching for our first hello...'}"
               </div>
             </div>
           </div>

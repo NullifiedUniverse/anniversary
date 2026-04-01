@@ -53,15 +53,36 @@ function cleanJson(text: string): string {
   if (start !== -1 && end !== -1) {
     clean = clean.substring(start, end + 1);
   }
-  // If it's a list (for generateMoreItems)
   if (clean.startsWith('[') && clean.endsWith(']')) return clean;
-  // Fallback if no {} found but starts with [
   const listStart = clean.indexOf('[');
   const listEnd = clean.lastIndexOf(']');
   if (listStart !== -1 && listEnd !== -1 && (start === -1 || listStart < start)) {
     return clean.substring(listStart, listEnd + 1);
   }
   return clean;
+}
+
+// INTELLIGENT SAMPLER: Picks random windows from the entire history
+function sampleMessages(messages: ChatMessage[], totalTarget: number = 800, windowSize: number = 100): ChatMessage[] {
+  if (messages.length <= totalTarget) return messages;
+
+  const result: ChatMessage[] = [];
+  const numWindows = Math.floor(totalTarget / windowSize);
+  
+  // Always include the very beginning
+  result.push(...messages.slice(0, windowSize));
+
+  // Pick random windows from the middle
+  for (let i = 0; i < numWindows - 2; i++) {
+    const start = Math.floor(Math.random() * (messages.length - windowSize * 2)) + windowSize;
+    result.push(...messages.slice(start, start + windowSize));
+  }
+
+  // Always include the very end
+  result.push(...messages.slice(-windowSize));
+
+  // Sort by timestamp to maintain relative flow
+  return result.sort((a, b) => a.timestamp - b.timestamp);
 }
 
 const DEFAULT_MEMORY_DATA: Partial<MemoryData> = {
@@ -84,22 +105,11 @@ export async function generateMemories(
 ): Promise<MemoryData> {
   if (messages.length === 0) throw new Error("No messages to analyze");
 
-  logger.info(`Starting analysis: ${messages.length} messages using ${modelName}`);
+  logger.info(`Starting deep analysis: ${messages.length} messages using ${modelName}`);
 
   const participants = Array.from(new Set(messages.map(m => m.sender)));
   
-  const sampledMessages: ChatMessage[] = [];
-  if (messages.length <= 500) {
-    sampledMessages.push(...messages);
-  } else {
-    sampledMessages.push(...messages.slice(0, 100));
-    const step = Math.floor((messages.length - 200) / 300);
-    for (let i = 0; i < 300; i++) {
-      sampledMessages.push(messages[100 + i * step]);
-    }
-    sampledMessages.push(...messages.slice(-100));
-  }
-
+  const sampledMessages = sampleMessages(messages, 1000, 150);
   const sampledTranscript = sampledMessages
     .filter(Boolean)
     .map(m => `[${new Date(m.timestamp).toLocaleDateString()}] ${m.sender}: ${m.content}`)
@@ -115,23 +125,23 @@ export async function generateMemories(
   const p1 = formatName(participants[0]);
   const p2 = formatName(participants[1] || '');
 
-  const prompt = `CONTEXT: You are a professional romantic storyteller creating a deep, emotional 1st anniversary scrapbook for ${p1} and ${p2}. This is a private retrospective.
+  const prompt = `CONTEXT: You are a professional romantic storyteller creating an emotional 1st anniversary scrapbook for ${p1} and ${p2}.
   
-  TASK: Analyze the provided transcript. Extract a deep narrative and specific shared memories.
+  TASK: Analyze the provided transcript. The transcript contains random windows of their history.
+  Extract a deep narrative and specific shared memories.
   
   OUTPUT INSTRUCTIONS:
   - Respond with a SINGLE JSON OBJECT only.
-  - DO NOT omit any fields.
   - "summary": A long, poetic 3-paragraph summary of their year (approx 200 words).
-  - "vibe": A short, catchy 3-5 word aesthetic description.
+  - "vibe": A catchy 3-word aesthetic description.
   - "highlights": 5 key shared moments.
-  - "memorableQuotes": 5 emotional or funny verbatim quotes with context.
+  - "memorableQuotes": 5 verbatim quotes with context.
   - "insideJokes": 5 jokes they share.
-  - "milestones": 5 key dates or phases in their relationship.
-  - "futureAdventures": 5 things they should do next based on their talks.
-  - "superlatives": 5 awards (e.g. "Best Listener").
-  - "communicationInsights": 5 observations on how they talk to each other.
-  - "topEmojis": The top 5 emojis they use.
+  - "milestones": 5 key dates or phases.
+  - "futureAdventures": 5 future plans.
+  - "superlatives": 5 awards.
+  - "communicationInsights": 5 observations.
+  - "topEmojis": The top 5 emojis.
 
   Structure:
   {
@@ -162,7 +172,7 @@ export async function generateMemories(
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           model: actualModel,
-          prompt: prompt + "\n\nRETURN ONLY RAW JSON. NO MARKDOWN. NO CONVERSATION.",
+          prompt: prompt + "\n\nRETURN ONLY RAW JSON. NO MARKDOWN.",
           stream: false,
           format: 'json'
         })
@@ -252,9 +262,10 @@ export async function generateMoreItems(
   if (messages.length === 0) return [];
 
   try {
-    const sampledTranscript = messages.slice(-300).map(m => `[${m.sender}]: ${m.content}`).join('\n');
+    // Pick a completely different random window for every infinite scroll call
+    const sampledMessages = sampleMessages(messages, 600, 200);
+    const sampledTranscript = sampledMessages.map(m => `[${m.sender}]: ${m.content}`).join('\n');
     
-    // Explicit format request per category
     let itemSchema = "";
     if (category === 'memorableQuotes') itemSchema = `{"sender": "...", "text": "...", "context": "..."}`;
     else if (category === 'highlights') itemSchema = `{"title": "...", "description": "..."}`;
@@ -264,11 +275,9 @@ export async function generateMoreItems(
     else if (category === 'superlatives') itemSchema = `{"title": "...", "winner": "...", "reason": "..."}`;
     else if (category === 'communicationInsights') itemSchema = `{"title": "...", "description": "..."}`;
 
-    const prompt = `CONTEXT: Anniversary scrapbook for a loving couple.
+    const prompt = `TASK: Find 5 NEW unique shared ${category} from this random history segment. 
     
-    TASK: Find 5 NEW unique shared ${category} from the chat. 
-    
-    EXISTING (DO NOT REPEAT): ${JSON.stringify(existingItems.map(i => i.title || i.text || i.joke))}
+    EXISTING (DO NOT REPEAT): ${JSON.stringify(existingItems.map(i => i.title || i.text || i.joke).slice(-10))}
     
     OUTPUT: A JSON list of 5 objects matching this schema: ${itemSchema}
     

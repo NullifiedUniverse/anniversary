@@ -28,9 +28,10 @@ export function QuotesSection({
   onLoadMoreInsights,
   onLoadMoreJokes
 }: QuotesSectionProps) {
-  const { ref: quotesRef, inView: quotesInView } = useInView({ threshold: 0.5, rootMargin: '100px' });
-  const { ref: insightsRef, inView: insightsInView } = useInView({ threshold: 0.5, rootMargin: '100px' });
-  const { ref: jokesRef, inView: jokesInView } = useInView({ threshold: 0.5, rootMargin: '100px' });
+  // trigger much earlier
+  const { ref: quotesRef, inView: quotesInView } = useInView({ threshold: 0.1, rootMargin: '400px' });
+  const { ref: insightsRef, inView: insightsInView } = useInView({ threshold: 0.1, rootMargin: '400px' });
+  const { ref: jokesRef, inView: jokesInView } = useInView({ threshold: 0.1, rootMargin: '400px' });
 
   useEffect(() => { if (quotesInView && !loadingQuotes) onLoadMoreQuotes(); }, [quotesInView, loadingQuotes]);
   useEffect(() => { if (insightsInView && !loadingInsights) onLoadMoreInsights(); }, [insightsInView, loadingInsights]);
@@ -46,20 +47,20 @@ export function QuotesSection({
   };
 
   return (
-    <div id="moments" className="max-w-[1400px] mx-auto space-y-32 px-4 pb-20 min-h-[400px]">
+    <div id="moments" className="max-w-[1400px] mx-auto space-y-32 px-4 pb-20 min-h-[800px]">
       {/* Cinematic Quotes */}
-      <section className="min-h-[300px]">
+      <section className="min-h-[400px]">
         <div className="text-center mb-32 space-y-6">
           <motion.div initial={{ scale: 0 }} whileInView={{ scale: 1 }} viewport={{ margin: "-20px" }} className="inline-flex items-center justify-center p-5 bg-indigo-500/10 rounded-3xl mb-6 border border-indigo-500/20 shadow-2xl">
             <Quote className="w-10 h-10 text-indigo-400" />
           </motion.div>
           <h2 className="text-7xl font-black text-white tracking-tighter">Our Echoes</h2>
-          <p className="text-2xl text-indigo-400 font-medium italic">Words that whisper through time.</p>
+          <p className="text-2xl text-indigo-400 font-medium italic">Verbatim heartbeats from our digital home.</p>
         </div>
         
         <div className="space-y-32">
           {quotes.length > 0 ? quotes.map((quote, index) => {
-            const isP1 = quote.sender === participants[0];
+            const isP1 = quote.sender.toLowerCase().includes('nullifiedgalaxy') || quote.sender === participants[0];
             
             return (
               <motion.div 
@@ -96,23 +97,31 @@ export function QuotesSection({
               </motion.div>
             );
           }) : (
-            <div className="text-center text-gray-600 font-medium italic py-12">Listening for our shared echoes...</div>
+            <div className="text-center py-32 space-y-8">
+               <div className="w-24 h-24 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin mx-auto" />
+               <p className="text-2xl text-gray-500 font-serif italic">Listening for our shared echoes in the vault...</p>
+            </div>
           )}
           
-          <div ref={quotesRef} className="flex justify-center py-24 min-h-[100px]">
-            {loadingQuotes && <Loader2 className="w-10 h-10 text-indigo-500 animate-spin" />}
+          <div ref={quotesRef} className="flex flex-col items-center justify-center py-24 min-h-[200px] space-y-6">
+            {loadingQuotes && (
+              <>
+                <Loader2 className="w-12 h-12 text-indigo-500 animate-spin" />
+                <p className="text-indigo-400 font-black uppercase tracking-widest text-[10px] animate-pulse">Summoning more words of love</p>
+              </>
+            )}
           </div>
         </div>
       </section>
 
       {/* Connection Insights */}
-      <section className="min-h-[300px]">
+      <section className="min-h-[400px]">
         <div className="text-center mb-32 space-y-6">
           <motion.div initial={{ scale: 0 }} whileInView={{ scale: 1 }} viewport={{ margin: "-20px" }} className="inline-flex items-center justify-center p-5 bg-amber-500/10 rounded-3xl mb-6 border border-amber-500/20 shadow-2xl">
             <TrendingUp className="w-10 h-10 text-amber-400" />
           </motion.div>
           <h2 className="text-7xl font-black text-white tracking-tighter">Our Pulse</h2>
-          <p className="text-2xl text-amber-400 font-medium italic">How our frequencies align.</p>
+          <p className="text-2xl text-amber-400 font-medium italic">Observations on how our spirits align.</p>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
@@ -132,21 +141,23 @@ export function QuotesSection({
               <p className="text-xl text-gray-400 leading-relaxed font-medium">{insight.description}</p>
             </motion.div>
           )) : (
-            <div className="col-span-full text-center text-gray-600 font-medium italic py-12">Mapping the rhythm of our connection...</div>
+            <div className="col-span-full text-center py-20 bg-white/[0.02] rounded-[4rem] border border-dashed border-white/5">
+               <p className="text-gray-600 italic">Unlocking the patterns of our connection...</p>
+            </div>
           )}
         </div>
-        <div ref={insightsRef} className="flex justify-center py-24 min-h-[100px]">
+        <div ref={insightsRef} className="flex justify-center py-24">
           {loadingInsights && <Loader2 className="w-10 h-10 text-amber-500 animate-spin" />}
         </div>
       </section>
 
       {/* Shared Smiles */}
-      <section className="min-h-[300px]">
+      <section className="min-h-[400px]">
         <div className="text-center mb-32 space-y-6">
           <motion.div initial={{ scale: 0 }} whileInView={{ scale: 1 }} viewport={{ margin: "-20px" }} className="inline-flex items-center justify-center p-5 bg-pink-500/10 rounded-3xl mb-6 border border-pink-500/20 shadow-2xl">
             <span className="text-5xl">🤭</span>
           </motion.div>
-          <h2 className="text-7xl font-black text-white tracking-tighter">Hidden Languages</h2>
+          <h2 className="text-7xl font-black text-white tracking-tighter">Secret Language</h2>
           <p className="text-2xl text-pink-400 font-medium italic">The jokes only we know the punchlines to.</p>
         </div>
         
@@ -166,10 +177,12 @@ export function QuotesSection({
               <p className="text-sm font-black uppercase tracking-[0.2em] text-gray-500">Origin: {joke.origin}</p>
             </motion.div>
           )) : (
-            <div className="col-span-full text-center text-gray-600 font-medium italic py-12">Recalling our secret smiles...</div>
+            <div className="col-span-full text-center py-20 bg-white/[0.02] rounded-[4rem] border border-dashed border-white/5">
+               <p className="text-gray-600 italic">Reliving our favorite shared smiles...</p>
+            </div>
           )}
         </div>
-        <div ref={jokesRef} className="flex justify-center py-24 min-h-[100px]">
+        <div ref={jokesRef} className="flex justify-center py-24">
           {loadingJokes && <Loader2 className="w-10 h-10 text-pink-500 animate-spin" />}
         </div>
       </section>
