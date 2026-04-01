@@ -6,7 +6,8 @@ export function useInfiniteMemories(
   data: MemoryData,
   messages: ChatMessage[],
   customApiKey?: string,
-  selectedModel?: string
+  selectedModel?: string,
+  ollamaEndpoint?: string
 ) {
   const [quotes, setQuotes] = useState(data.memorableQuotes || []);
   const [insights, setInsights] = useState(data.communicationInsights || []);
@@ -65,7 +66,14 @@ export function useInfiniteMemories(
       const config = categoryMap[category];
       if (config) {
         const { key, state, setter } = config;
-        const newItems = await generateMoreItems(messages, key, state, customApiKey || '', selectedModel);
+        const newItems = await generateMoreItems(
+          messages, 
+          key, 
+          state, 
+          customApiKey || '', 
+          selectedModel || 'gemini-2.0-flash', 
+          ollamaEndpoint
+        );
         if (Array.isArray(newItems) && newItems.length > 0) {
           setter((prev: any[]) => [...prev, ...newItems]);
         }

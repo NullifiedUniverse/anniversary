@@ -19,9 +19,10 @@ interface MemoriesProps {
   messages: ChatMessage[];
   customApiKey?: string;
   selectedModel?: string;
+  ollamaEndpoint?: string;
 }
 
-export function Memories({ data, messages, customApiKey, selectedModel }: MemoriesProps) {
+export function Memories({ data, messages, customApiKey, selectedModel, ollamaEndpoint }: MemoriesProps) {
   const [activeSection, setActiveSection] = useState<string>('story');
   
   const {
@@ -34,7 +35,7 @@ export function Memories({ data, messages, customApiKey, selectedModel }: Memori
     superlatives,
     loading,
     generateMore
-  } = useInfiniteMemories(data, messages, customApiKey, selectedModel);
+  } = useInfiniteMemories(data, messages, customApiKey, selectedModel, ollamaEndpoint);
 
   const sectionRefs = {
     story: useRef<HTMLDivElement>(null),
@@ -129,22 +130,22 @@ export function Memories({ data, messages, customApiKey, selectedModel }: Memori
       {/* Page Content */}
       <div className="flex flex-col space-y-32 py-24">
         
-        <motion.div ref={sectionRefs.story} initial="hidden" whileInView="show" viewport={{ once: true, margin: "0px" }} variants={sectionVariants}>
+        <motion.div ref={sectionRefs.story} initial="hidden" whileInView="show" viewport={{ once: false, margin: "-20px" }} variants={sectionVariants}>
           <MemoriesHeader participants={data.participants} vibe={data.vibe} />
           <div className="mt-24">
             <StorySection data={data} />
           </div>
         </motion.div>
 
-        <motion.div ref={sectionRefs.stats} initial="hidden" whileInView="show" viewport={{ once: true, margin: "0px" }} variants={sectionVariants}>
+        <motion.div ref={sectionRefs.stats} initial="hidden" whileInView="show" viewport={{ once: false, margin: "-20px" }} variants={sectionVariants}>
           <StatsSection data={data} />
         </motion.div>
 
-        <motion.div ref={sectionRefs.words} initial="hidden" whileInView="show" viewport={{ once: true, margin: "0px" }} variants={sectionVariants}>
+        <motion.div ref={sectionRefs.words} initial="hidden" whileInView="show" viewport={{ once: false, margin: "-20px" }} variants={sectionVariants}>
           <WordCloudSection data={data} />
         </motion.div>
 
-        <motion.div ref={sectionRefs.highlights} initial="hidden" whileInView="show" viewport={{ once: true, margin: "0px" }} variants={sectionVariants} className="space-y-32">
+        <motion.div ref={sectionRefs.highlights} initial="hidden" whileInView="show" viewport={{ once: false, margin: "-20px" }} variants={sectionVariants} className="space-y-32">
           <HighlightsSection 
             highlights={highlights}
             milestones={milestones}
@@ -167,7 +168,7 @@ export function Memories({ data, messages, customApiKey, selectedModel }: Memori
           />
         </motion.div>
 
-        <motion.div ref={sectionRefs.future} initial="hidden" whileInView="show" viewport={{ once: true, margin: "0px" }} variants={sectionVariants}>
+        <motion.div ref={sectionRefs.future} initial="hidden" whileInView="show" viewport={{ once: false, margin: "-20px" }} variants={sectionVariants}>
           <FutureSection 
             adventures={futureAdventures}
             superlatives={superlatives}
@@ -178,7 +179,7 @@ export function Memories({ data, messages, customApiKey, selectedModel }: Memori
           />
         </motion.div>
 
-        <motion.div ref={sectionRefs.explore} initial="hidden" whileInView="show" viewport={{ once: true, margin: "0px" }} variants={sectionVariants}>
+        <motion.div ref={sectionRefs.explore} initial="hidden" whileInView="show" viewport={{ once: false, margin: "-20px" }} variants={sectionVariants}>
           <ExploreSection messages={messages} participants={data.participants} />
         </motion.div>
 
@@ -186,7 +187,7 @@ export function Memories({ data, messages, customApiKey, selectedModel }: Memori
         <motion.div 
           initial={{ opacity: 0 }} 
           whileInView={{ opacity: 1 }} 
-          viewport={{ once: true }}
+          viewport={{ once: false }}
           className="max-w-5xl mx-auto pt-64 pb-32 text-center relative"
         >
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-px h-32 bg-gradient-to-b from-transparent via-pink-500/50 to-transparent" />

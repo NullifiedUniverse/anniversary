@@ -1,4 +1,4 @@
-import React from 'react';
+import React;
 import { motion } from 'motion/react';
 import { Cloud } from 'lucide-react';
 import { MemoryData } from '../../lib/gemini';
@@ -30,7 +30,7 @@ export function WordCloudSection({ data }: WordCloudSectionProps) {
       id="words"
       initial="hidden" 
       whileInView="show" 
-      viewport={{ once: true, margin: "-100px" }}
+      viewport={{ once: false, margin: "-20px" }}
       variants={{
         hidden: { opacity: 0 },
         show: { opacity: 1, transition: { staggerChildren: 0.05 } }

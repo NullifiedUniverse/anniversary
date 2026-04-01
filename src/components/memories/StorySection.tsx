@@ -22,7 +22,7 @@ export function StorySection({ data }: StorySectionProps) {
       id="story"
       initial="hidden" 
       whileInView="show" 
-      viewport={{ once: true, margin: "0px" }}
+      viewport={{ once: false, margin: "-20px" }}
       variants={{
         hidden: { opacity: 0, y: 50 },
         show: { opacity: 1, y: 0, transition: { duration: 1, staggerChildren: 0.2 } }
