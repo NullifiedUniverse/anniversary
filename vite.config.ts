@@ -17,53 +17,8 @@ const aiProxy = () => ({
               return res.end(JSON.stringify({ error: "Empty request body" }));
             }
 
-            const { prompt, modelName, apiKey, ollamaEndpoint } = JSON.parse(body);
+            const { prompt, modelName, apiKey } = JSON.parse(body);
             
-            // --- OLLAMA LOGIC ---
-            if (modelName && modelName.startsWith('ollama:')) {
-              // Fix: Slice instead of split to keep full tags like :30b
-              const actualModel = modelName.slice(7); 
-              const endpoint = (ollamaEndpoint || 'http://localhost:11434').replace(/\/$/, '');
-              
-              console.log(`[AI Proxy] 🏠 Calling Local Ollama (${actualModel}) at ${endpoint}...`);
-              
-              try {
-                const response = await fetch(`${endpoint}/api/generate`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    model: actualModel,
-                    prompt: prompt + "\n\nIMPORTANT: You must respond with PURE JSON only. No markdown formatting, no backticks, no conversational text. The response must be a single valid JSON object matching the requested schema.",
-                    stream: false,
-                    format: 'json'
-                  })
-                });
-
-                if (!response.ok) {
-                  const errText = await response.text();
-                  throw new Error(`Ollama Error: ${errText}`);
-                }
-
-                const data = await response.json();
-                res.setHeader('Content-Type', 'application/json');
-                
-                // Ensure we strip any potential backticks or chatter if the model ignored the format: json flag
-                let cleanResponse = data.response.trim();
-                if (cleanResponse.startsWith('```')) {
-                  cleanResponse = cleanResponse.replace(/^```json/, '').replace(/^```/, '').replace(/```$/, '').trim();
-                }
-                
-                res.end(cleanResponse);
-                console.log(`[AI Proxy] ✅ Ollama Success.`);
-                return;
-              } catch (ollamaErr: any) {
-                console.error(`[AI Proxy] ❌ Ollama Failure:`, ollamaErr);
-                res.statusCode = 500;
-                return res.end(JSON.stringify({ error: ollamaErr.message }));
-              }
-            }
-
-            // --- GEMINI LOGIC ---
             if (!apiKey || !apiKey.trim()) {
               res.statusCode = 400;
               return res.end(JSON.stringify({ error: "API Key missing" }));
@@ -83,7 +38,14 @@ const aiProxy = () => ({
                   contents: [{ parts: [{ text: prompt }] }],
                   generationConfig: {
                     responseMimeType: "application/json"
-                  }
+                  },
+                  // Lower safety thresholds to prevent "PROHIBITED_CONTENT" blocks for romantic chat data
+                  safetySettings: [
+                    { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_ONLY_HIGH" },
+                    { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_ONLY_HIGH" },
+                    { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_ONLY_HIGH" },
+                    { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_ONLY_HIGH" }
+                  ]
                 })
               }
             );
@@ -101,21 +63,32 @@ const aiProxy = () => ({
             if (!response.ok) {
               console.error("[AI Proxy] ❌ Gemini API Error:", data);
               res.statusCode = response.status;
-              
-              let errorMessage = "Gemini API Error";
-              if (data.error?.message) {
-                errorMessage = data.error.message;
-              }
-              
               return res.end(JSON.stringify({ 
-                error: errorMessage,
+                error: data.error?.message || "Gemini API Error",
                 details: data.error 
+              }));
+            }
+
+            // Check if the content was blocked by safety filters
+            if (data.promptFeedback?.blockReason === 'PROHIBITED_CONTENT') {
+              console.error("[AI Proxy] ⚠️ Content blocked by Gemini safety filters.");
+              res.statusCode = 422; // Unprocessable Entity
+              return res.end(JSON.stringify({ 
+                error: "The AI safety filters blocked this specific chapter of your story. Try a different model or re-run the analysis.",
+                details: data.promptFeedback
               }));
             }
 
             const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text;
             
             if (!aiText) {
+              // Check if the candidate was blocked even if the prompt wasn't
+              const finishReason = data.candidates?.[0]?.finishReason;
+              if (finishReason === 'SAFETY') {
+                res.statusCode = 422;
+                return res.end(JSON.stringify({ error: "This response was filtered for safety. It's too soulful for the AI's current settings!" }));
+              }
+
               console.error("[AI Proxy] ❌ No text in candidates:", data);
               res.statusCode = 500;
               return res.end(JSON.stringify({ error: "Empty narrative generated by AI" }));
