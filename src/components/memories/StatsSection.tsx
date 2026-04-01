@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Heart, TrendingUp, Star, BarChart3, Clock, Zap } from 'lucide-react';
+import { Heart, TrendingUp, Star, BarChart3, Clock, Zap, Waves } from 'lucide-react';
 import { XAxis, Tooltip as RechartsTooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import { MemoryData } from '../../lib/gemini';
 
 interface StatsSectionProps {
   data: MemoryData;
+  seeds?: any;
 }
 
 function StatCard({ icon, title, value, tooltip, delay = 0 }: { icon: React.ReactNode, title: string, value: string | number, tooltip: string, delay?: number }) {
@@ -44,7 +45,7 @@ function StatCard({ icon, title, value, tooltip, delay = 0 }: { icon: React.Reac
   );
 }
 
-export function StatsSection({ data }: StatsSectionProps) {
+export function StatsSection({ data, seeds }: StatsSectionProps) {
   const formatName = (name: string) => {
     if (!name) return "Unknown";
     const lowerName = name.toLowerCase();
@@ -61,16 +62,16 @@ export function StatsSection({ data }: StatsSectionProps) {
   }));
 
   return (
-    <div id="stats" className="space-y-24 max-w-[1400px] mx-auto pt-20 px-4">
+    <div id="stats" className="space-y-32 max-w-[1400px] mx-auto pt-20 px-4">
       <div className="text-center space-y-8">
-        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: false, margin: "-20px" }} className="inline-flex items-center space-x-3 bg-indigo-500/10 text-indigo-400 px-6 py-2.5 rounded-full text-[10px] font-black border border-indigo-500/20 uppercase tracking-[0.3em]">
+        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ margin: "-20px" }} className="inline-flex items-center space-x-3 bg-indigo-500/10 text-indigo-400 px-6 py-2.5 rounded-full text-[10px] font-black border border-indigo-500/20 uppercase tracking-[0.3em]">
           <Zap size={14} className="fill-indigo-400" />
           <span>The Frequency of Us</span>
         </motion.div>
         <motion.h2 
           initial={{ opacity: 0, scale: 0.95 }}
           whileInView={{ opacity: 1, scale: 1 }}
-          viewport={{ once: false, margin: "-20px" }}
+          viewport={{ margin: "-20px" }}
           transition={{ duration: 1 }}
           className="text-7xl md:text-9xl font-black text-white tracking-tighter leading-none"
         >
@@ -79,7 +80,7 @@ export function StatsSection({ data }: StatsSectionProps) {
         <motion.p 
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
-          viewport={{ once: false, margin: "-20px" }}
+          viewport={{ margin: "-20px" }}
           transition={{ delay: 0.3 }}
           className="text-2xl md:text-3xl text-gray-400 font-medium italic tracking-wide max-w-3xl mx-auto"
         >
@@ -97,7 +98,7 @@ export function StatsSection({ data }: StatsSectionProps) {
         <motion.div 
           initial={{ opacity: 0, x: -40 }}
           whileInView={{ opacity: 1, x: 0 }}
-          viewport={{ once: false, margin: "-20px" }}
+          viewport={{ margin: "-20px" }}
           transition={{ duration: 1 }}
           className="lg:col-span-3 bg-white/[0.02] backdrop-blur-3xl rounded-[5rem] p-16 border border-white/10 shadow-2xl relative overflow-hidden group flex flex-col justify-between"
         >
@@ -137,7 +138,7 @@ export function StatsSection({ data }: StatsSectionProps) {
         <motion.div 
           initial={{ opacity: 0, x: 40 }}
           whileInView={{ opacity: 1, x: 0 }}
-          viewport={{ once: false, margin: "-20px" }}
+          viewport={{ margin: "-20px" }}
           transition={{ duration: 1 }}
           className="lg:col-span-2 bg-white/[0.02] backdrop-blur-3xl rounded-[5rem] p-16 border border-white/10 shadow-2xl flex flex-col"
         >
@@ -163,6 +164,37 @@ export function StatsSection({ data }: StatsSectionProps) {
           </div>
         </motion.div>
       </div>
+
+      {/* Sentiment Bursts (Rigorous Addition) */}
+      {seeds?.sentimentBursts?.length > 0 && (
+        <motion.div 
+          initial={{ opacity: 0, y: 40 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ margin: "-20px" }}
+          className="bg-gradient-to-br from-indigo-900/20 to-pink-900/20 rounded-[5rem] p-16 md:p-24 border border-white/5 relative overflow-hidden"
+        >
+          <div className="absolute top-0 left-0 w-full h-full bg-white/[0.02] pointer-events-none" />
+          <div className="text-center mb-20 space-y-6 relative z-10">
+            <div className="inline-flex p-5 bg-white/5 rounded-3xl mb-4 border border-white/10"><Waves className="w-10 h-10 text-indigo-400 animate-pulse" /></div>
+            <h3 className="text-5xl font-black text-white tracking-tight">Waves of Soul</h3>
+            <p className="text-xl text-gray-400 font-medium italic">Moments where our emotional energy reached its peak.</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 relative z-10">
+            {seeds.sentimentBursts.slice(0, 8).map((burst: any, i: number) => (
+              <motion.div 
+                key={i}
+                whileHover={{ scale: 1.05, y: -5 }}
+                className="bg-black/40 backdrop-blur-xl p-8 rounded-[3rem] border border-white/10 flex flex-col justify-center text-center space-y-4"
+              >
+                <span className="text-[10px] font-black uppercase tracking-widest text-indigo-500">{burst.date}</span>
+                <h4 className="text-xl font-black text-white">{burst.title}</h4>
+                <p className="text-xs text-gray-500 font-medium leading-relaxed">{burst.description}</p>
+              </motion.div>
+            ))}
+          </div>
+        </motion.div>
+      )}
     </div>
   );
 }

@@ -10,13 +10,41 @@ export function useInfiniteMemories(
   ollamaEndpoint?: string,
   seeds?: any
 ) {
-  // Initialize with merged data or seeds
-  const [quotes, setQuotes] = useState(data.memorableQuotes || seeds?.quotes || []);
+  // Use sets to track seen content and prevent duplicates
+  const seenContent = useRef<Set<string>>(new Set());
+
+  const [quotes, setQuotes] = useState(() => {
+    const initial = data.memorableQuotes || seeds?.quotes || [];
+    initial.forEach((q: any) => seenContent.current.add(q.text));
+    return initial;
+  });
+
   const [insights, setInsights] = useState(data.communicationInsights || []);
-  const [jokes, setJokes] = useState(data.insideJokes || seeds?.jokes || []);
-  const [highlights, setHighlights] = useState(data.highlights || []);
-  const [milestones, setMilestones] = useState(data.milestones || seeds?.milestones || []);
-  const [futureAdventures, setFutureAdventures] = useState(data.futureAdventures || seeds?.future || []);
+  
+  const [jokes, setJokes] = useState(() => {
+    const initial = data.insideJokes || seeds?.jokes || [];
+    initial.forEach((j: any) => seenContent.current.add(j.joke));
+    return initial;
+  });
+
+  const [highlights, setHighlights] = useState(() => {
+    const initial = data.highlights || [];
+    initial.forEach((h: any) => seenContent.current.add(h.title));
+    return initial;
+  });
+
+  const [milestones, setMilestones] = useState(() => {
+    const initial = data.milestones || seeds?.milestones || [];
+    initial.forEach((m: any) => seenContent.current.add(m.title));
+    return initial;
+  });
+
+  const [futureAdventures, setFutureAdventures] = useState(() => {
+    const initial = data.futureAdventures || seeds?.future || [];
+    initial.forEach((f: any) => seenContent.current.add(f.title));
+    return initial;
+  });
+
   const [superlatives, setSuperlatives] = useState(data.superlatives || []);
 
   const [loading, setLoading] = useState<Record<string, boolean>>({
@@ -54,18 +82,18 @@ export function useInfiniteMemories(
     
     try {
       const categoryMap: Record<string, any> = {
-        quotes: { key: 'memorableQuotes', state: quotes, setter: setQuotes },
-        insights: { key: 'communicationInsights', state: insights, setter: setInsights },
-        jokes: { key: 'insideJokes', state: jokes, setter: setJokes },
-        highlights: { key: 'highlights', state: highlights, setter: setHighlights },
-        milestones: { key: 'milestones', state: milestones, setter: setMilestones },
-        futureAdventures: { key: 'futureAdventures', state: futureAdventures, setter: setFutureAdventures },
-        superlatives: { key: 'superlatives', state: superlatives, setter: setSuperlatives },
+        quotes: { key: 'memorableQuotes', state: quotes, setter: setQuotes, contentKey: 'text' },
+        insights: { key: 'communicationInsights', state: insights, setter: setInsights, contentKey: 'title' },
+        jokes: { key: 'insideJokes', state: jokes, setter: setJokes, contentKey: 'joke' },
+        highlights: { key: 'highlights', state: highlights, setter: setHighlights, contentKey: 'title' },
+        milestones: { key: 'milestones', state: milestones, setter: setMilestones, contentKey: 'title' },
+        futureAdventures: { key: 'futureAdventures', state: futureAdventures, setter: setFutureAdventures, contentKey: 'title' },
+        superlatives: { key: 'superlatives', state: superlatives, setter: setSuperlatives, contentKey: 'title' },
       };
 
       const config = categoryMap[category as string];
       if (config) {
-        const { key, state, setter } = config;
+        const { key, state, setter, contentKey } = config;
         const newItems = await generateMoreItems(
           messages, 
           key, 
@@ -74,8 +102,19 @@ export function useInfiniteMemories(
           selectedModel || 'gemini-2.0-flash', 
           ollamaEndpoint
         );
+        
         if (Array.isArray(newItems) && newItems.length > 0) {
-          setter((prev: any[]) => [...prev, ...newItems]);
+          // Filter out duplicates rigorously
+          const uniqueNewItems = newItems.filter(item => {
+            const val = item[contentKey];
+            if (seenContent.current.has(val)) return false;
+            seenContent.current.add(val);
+            return true;
+          });
+          
+          if (uniqueNewItems.length > 0) {
+            setter((prev: any[]) => [...prev, ...uniqueNewItems]);
+          }
         }
       }
     } catch (error) {

@@ -1,13 +1,14 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { Calendar, Sparkles } from 'lucide-react';
+import { Calendar, Sparkles, Sun, Sunset, Moon, Coffee } from 'lucide-react';
 import { MemoryData } from '../../lib/gemini';
 
 interface StorySectionProps {
   data: MemoryData;
+  seeds?: any;
 }
 
-export function StorySection({ data }: StorySectionProps) {
+export function StorySection({ data, seeds }: StorySectionProps) {
   const formatName = (name: string) => {
     if (!name) return "Unknown";
     const lowerName = name.toLowerCase();
@@ -15,6 +16,13 @@ export function StorySection({ data }: StorySectionProps) {
     if (lowerName.includes('vanessa')) return "Yun";
     const cleanName = name.split(/_|(?=[A-Z])/)[0];
     return cleanName.charAt(0).toUpperCase() + cleanName.slice(1);
+  };
+
+  const getTimeIcon = (cat: string) => {
+    if (cat.includes('Morning')) return <Coffee className="text-amber-400" />;
+    if (cat.includes('Daylight')) return <Sun className="text-yellow-400" />;
+    if (cat.includes('Twilight')) return <Sunset className="text-orange-400" />;
+    return <Moon className="text-indigo-400" />;
   };
 
   return (
@@ -27,7 +35,7 @@ export function StorySection({ data }: StorySectionProps) {
         hidden: { opacity: 0, y: 50 },
         show: { opacity: 1, y: 0, transition: { duration: 1, staggerChildren: 0.2 } }
       }}
-      className="space-y-24 relative z-10"
+      className="space-y-32 relative z-10"
     >
       {/* Narrative Summary */}
       <motion.div 
@@ -50,6 +58,39 @@ export function StorySection({ data }: StorySectionProps) {
         
         <Sparkles className="absolute bottom-12 right-12 text-pink-500 opacity-20" size={40} />
       </motion.div>
+
+      {/* Time of Day Insights (Rigorous Addition) */}
+      {seeds?.timeInsights?.length > 0 && (
+        <div className="max-w-6xl mx-auto space-y-16">
+          <div className="text-center space-y-4">
+            <h3 className="text-4xl font-black text-white tracking-tight">The Rhythm of Our Days</h3>
+            <p className="text-lg text-gray-400 font-medium">How our connection evolves from dawn to dusk.</p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {seeds.timeInsights.map((insight: any, i: number) => (
+              <motion.div 
+                key={i}
+                variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } }}
+                className="bg-white/5 p-8 rounded-[3rem] border border-white/10 flex flex-col space-y-6 group hover:bg-white/10 transition-colors"
+              >
+                <div className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                  {getTimeIcon(insight.category)}
+                </div>
+                <div className="space-y-2">
+                  <h4 className="font-black text-white uppercase tracking-widest text-xs">{insight.category}</h4>
+                  <p className="text-sm text-gray-400 font-medium leading-relaxed">{insight.description}</p>
+                </div>
+                {insight.sample && (
+                  <div className="pt-4 border-t border-white/5">
+                    <p className="text-[10px] text-gray-500 italic line-clamp-3">"{insight.sample}"</p>
+                  </div>
+                )}
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* The Origin */}
       <div className="max-w-4xl mx-auto relative px-4">

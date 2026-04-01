@@ -37,3 +37,17 @@
     - [ ] Implement: Selection UI in `App.tsx` setup and retry screens.
     - [ ] Implement: Persistence of model choice in state.
 - [ ] Task: Conductor - User Manual Verification 'Phase 4' (Protocol in workflow.md)
+
+## Phase 5: Cinematic Perfection & Massive Data Rigor
+- [ ] Task: Rigorous Pre-processing Expansion
+    - [ ] Implement: Expand `scripts/pre-parse.ts` to extract 100+ quotes and 50+ milestones.
+    - [ ] Implement: Add local "Sentiment Bursts" detection (high density of emotional keywords).
+    - [ ] Implement: Add "Time-of-Day" narrative seeds (e.g., "The Twilight Hours").
+- [ ] Task: Premium Visual Storytelling
+    - [ ] Implement: Add a glowing "Story Line" connector that traces the scroll path.
+    - [ ] Implement: Add Parallax depth effects to section backgrounds.
+    - [ ] Implement: Poetic "Chapter Transitions" with unique typography.
+- [ ] Task: Model-Specific Prompt Tuning
+    - [ ] Implement: Rigid JSON-only formatting for local Ollama models.
+    - [ ] Implement: "Proactive" infinite loading (buffer next batch before trigger).
+- [ ] Task: Conductor - User Manual Verification 'Phase 5' (Protocol in workflow.md)

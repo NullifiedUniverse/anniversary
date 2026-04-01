@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence, useScroll, useSpring } from 'motion/react';
 import { MemoryData } from '../lib/gemini';
 import { ChatMessage } from '../lib/parser';
-import { Heart, BookOpen, BarChart3, Cloud, Star, Search, ChevronDown } from 'lucide-react';
+import { Heart, BookOpen, BarChart3, Cloud, Star, Search, Sparkles } from 'lucide-react';
 
 import { useInfiniteMemories } from './memories/useInfiniteMemories';
 import { MemoriesHeader } from './memories/MemoriesHeader';
@@ -22,6 +22,51 @@ interface MemoriesProps {
   selectedModel?: string;
   ollamaEndpoint?: string;
 }
+
+const ChapterTransition = ({ title, subtitle, icon }: { title: string, subtitle: string, icon: React.ReactNode }) => (
+  <motion.div 
+    initial={{ opacity: 0 }}
+    whileInView={{ opacity: 1 }}
+    viewport={{ once: false, margin: "-100px" }}
+    className="w-full py-48 flex flex-col items-center justify-center text-center space-y-8 pointer-events-none"
+  >
+    <motion.div 
+      initial={{ scale: 0.8, opacity: 0 }}
+      whileInView={{ scale: 1, opacity: 1 }}
+      transition={{ duration: 1, ease: "easeOut" }}
+      className="w-px h-24 bg-gradient-to-b from-transparent via-indigo-500 to-transparent mb-8"
+    />
+    <div className="p-4 bg-white/5 rounded-full border border-white/10 mb-4">
+      {icon}
+    </div>
+    <h3 className="text-5xl md:text-7xl font-serif italic text-white/20 tracking-widest uppercase">{title}</h3>
+    <p className="text-indigo-400/40 font-black tracking-[0.5em] uppercase text-[10px]">{subtitle}</p>
+    <motion.div 
+      initial={{ scale: 0.8, opacity: 0 }}
+      whileInView={{ scale: 1, opacity: 1 }}
+      transition={{ duration: 1, ease: "easeOut", delay: 0.2 }}
+      className="w-px h-24 bg-gradient-to-b from-transparent via-pink-500 to-transparent mt-8"
+    />
+  </motion.div>
+);
+
+const StoryLine = () => {
+  const { scrollYProgress } = useScroll();
+  const scaleY = useSpring(scrollYProgress, {
+    stiffness: 100,
+    damping: 30,
+    restDelta: 0.001
+  });
+
+  return (
+    <div className="fixed left-8 top-0 bottom-0 w-px bg-white/5 z-0 hidden 2xl:block">
+      <motion.div 
+        className="absolute top-0 left-0 w-full bg-gradient-to-b from-indigo-500 via-pink-500 to-amber-500 shadow-[0_0_15px_rgba(99,102,241,0.5)]"
+        style={{ scaleY, height: '100%', originY: 0 }}
+      />
+    </div>
+  );
+};
 
 export function Memories({ data, messages, seeds, customApiKey, selectedModel, ollamaEndpoint }: MemoriesProps) {
   const [activeSection, setActiveSection] = useState<string>('story');
@@ -90,6 +135,7 @@ export function Memories({ data, messages, seeds, customApiKey, selectedModel, o
 
   return (
     <div className="w-full relative">
+      <StoryLine />
       
       {/* Premium Floating Navigation */}
       <motion.div 
@@ -129,22 +175,28 @@ export function Memories({ data, messages, seeds, customApiKey, selectedModel, o
       </motion.div>
 
       {/* Page Content */}
-      <div className="flex flex-col space-y-32 py-24">
+      <div className="flex flex-col py-24">
         
         <motion.div ref={sectionRefs.story} initial="hidden" whileInView="show" viewport={{ once: false, margin: "-20px" }} variants={sectionVariants}>
           <MemoriesHeader participants={data.participants} vibe={data.vibe} />
           <div className="mt-24">
-            <StorySection data={data} />
+            <StorySection data={data} seeds={seeds} />
           </div>
         </motion.div>
 
+        <ChapterTransition title="The Pulse" subtitle="Analyzing the architecture of us" icon={<BarChart3 size={24} className="text-indigo-400" />} />
+
         <motion.div ref={sectionRefs.stats} initial="hidden" whileInView="show" viewport={{ once: false, margin: "-20px" }} variants={sectionVariants}>
-          <StatsSection data={data} />
+          <StatsSection data={data} seeds={seeds} />
         </motion.div>
+
+        <ChapterTransition title="The Lexicon" subtitle="The words that built our world" icon={<Cloud size={24} className="text-pink-400" />} />
 
         <motion.div ref={sectionRefs.words} initial="hidden" whileInView="show" viewport={{ once: false, margin: "-20px" }} variants={sectionVariants}>
           <WordCloudSection data={data} />
         </motion.div>
+
+        <ChapterTransition title="The Gallery" subtitle="A retrospective of shared light" icon={<Sparkles size={24} className="text-amber-400" />} />
 
         <motion.div ref={sectionRefs.highlights} initial="hidden" whileInView="show" viewport={{ once: false, margin: "-20px" }} variants={sectionVariants} className="space-y-32">
           <HighlightsSection 
@@ -169,6 +221,8 @@ export function Memories({ data, messages, seeds, customApiKey, selectedModel, o
           />
         </motion.div>
 
+        <ChapterTransition title="The Horizon" subtitle="Dreaming into the unknown" icon={<Heart size={24} className="text-rose-400" />} />
+
         <motion.div ref={sectionRefs.future} initial="hidden" whileInView="show" viewport={{ once: false, margin: "-20px" }} variants={sectionVariants}>
           <FutureSection 
             adventures={futureAdventures}
@@ -179,6 +233,8 @@ export function Memories({ data, messages, seeds, customApiKey, selectedModel, o
             onLoadMoreSuperlatives={() => generateMore('superlatives')}
           />
         </motion.div>
+
+        <ChapterTransition title="The Archive" subtitle="Wander through every breath taken" icon={<Search size={24} className="text-gray-400" />} />
 
         <motion.div ref={sectionRefs.explore} initial="hidden" whileInView="show" viewport={{ once: false, margin: "-20px" }} variants={sectionVariants}>
           <ExploreSection messages={messages} participants={data.participants} />
