@@ -10,13 +10,13 @@ export function useInfiniteMemories(
   ollamaEndpoint?: string,
   seeds?: any
 ) {
-  // Initialize with seeds if provided, otherwise fallback to initial AI data
-  const [quotes, setQuotes] = useState(seeds?.quotes?.length > 0 ? seeds.quotes : (data.memorableQuotes || []));
+  // Initialize with merged data or seeds
+  const [quotes, setQuotes] = useState(data.memorableQuotes || seeds?.quotes || []);
   const [insights, setInsights] = useState(data.communicationInsights || []);
-  const [jokes, setJokes] = useState(data.insideJokes || []);
+  const [jokes, setJokes] = useState(data.insideJokes || seeds?.jokes || []);
   const [highlights, setHighlights] = useState(data.highlights || []);
-  const [milestones, setMilestones] = useState(seeds?.milestones?.length > 0 ? seeds.milestones : (data.milestones || []));
-  const [futureAdventures, setFutureAdventures] = useState(data.futureAdventures || []);
+  const [milestones, setMilestones] = useState(data.milestones || seeds?.milestones || []);
+  const [futureAdventures, setFutureAdventures] = useState(data.futureAdventures || seeds?.future || []);
   const [superlatives, setSuperlatives] = useState(data.superlatives || []);
 
   const [loading, setLoading] = useState<Record<string, boolean>>({

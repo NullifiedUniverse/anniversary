@@ -5,8 +5,10 @@ export interface ChatMessage {
 }
 
 export interface SeedMemories {
-  quotes: { sender: string; text: string; timestamp: number }[];
-  milestones: { date: string; messageCount: number; sampleText: string }[];
+  quotes: { sender: string; text: string; timestamp: number; context: string }[];
+  milestones: { title: string; description: string; date: string }[];
+  jokes: { joke: string; origin: string }[];
+  future: { title: string; description: string }[];
   words: { word: string; count: number }[];
 }
 
@@ -51,17 +53,25 @@ export async function parseFiles(files: File[]): Promise<{ messages: ChatMessage
 }
 
 function extractSeeds(messages: ChatMessage[]): SeedMemories {
-  // 1. Find potential romantic/meaningful quotes (long messages with emotional keywords)
   const emotionalKeywords = ['love', 'miss', 'always', 'forever', 'happy', 'thank', 'beautiful', 'wonderful', 'special', 'sorry', 'promise'];
-  const potentialQuotes = messages
-    .filter(m => m.content.length > 40 && m.content.length < 300)
-    .filter(m => emotionalKeywords.some(word => m.content.toLowerCase().includes(word)))
-    .slice(-50) // Take from recent half primarily
-    .sort(() => 0.5 - Math.random()) // Randomize
-    .slice(0, 10)
-    .map(m => ({ sender: m.sender, text: m.content, timestamp: m.timestamp }));
+  const futureKeywords = ['next', 'will', 'future', 'going', 'visit', 'travel', 'house', 'wedding', 'together'];
+  const jokeKeywords = ['lol', 'lmao', 'haha', 'remember', 'when', 'that time', 'joke'];
 
-  // 2. Find Milestones (High volume days)
+  // 1. Quotes
+  const quotes = messages
+    .filter(m => m.content.length > 40 && m.content.length < 200)
+    .filter(m => emotionalKeywords.some(word => m.content.toLowerCase().includes(word)))
+    .slice(-100)
+    .sort(() => 0.5 - Math.random())
+    .slice(0, 8)
+    .map(m => ({ 
+      sender: m.sender, 
+      text: m.content, 
+      timestamp: m.timestamp,
+      context: "A heartfelt message from our history."
+    }));
+
+  // 2. Milestones (Peak Activity)
   const dayCounts: Record<string, { count: number, sample: string }> = {};
   messages.forEach(m => {
     const date = new Date(m.timestamp).toLocaleDateString();
@@ -72,14 +82,37 @@ function extractSeeds(messages: ChatMessage[]): SeedMemories {
 
   const milestones = Object.entries(dayCounts)
     .sort((a, b) => b[1].count - a[1].count)
-    .slice(0, 10)
+    .slice(0, 6)
     .map(([date, data]) => ({
-      date,
-      messageCount: data.count,
-      sampleText: data.sample
+      title: `The Peak of ${date}`,
+      description: `We shared ${data.count} messages on this special day.`,
+      date
     }));
 
-  // 3. Top Words (excluding common ones)
+  // 3. Inside Jokes
+  const jokes = messages
+    .filter(m => m.content.length < 100)
+    .filter(m => jokeKeywords.some(word => m.content.toLowerCase().includes(word)))
+    .slice(-100)
+    .sort(() => 0.5 - Math.random())
+    .slice(0, 6)
+    .map(m => ({
+      joke: m.content,
+      origin: `Shared on ${new Date(m.timestamp).toLocaleDateString()}`
+    }));
+
+  // 4. Future
+  const future = messages
+    .filter(m => futureKeywords.some(word => m.content.toLowerCase().includes(word)))
+    .slice(-100)
+    .sort(() => 0.5 - Math.random())
+    .slice(0, 4)
+    .map(m => ({
+      title: "A Shared Dream",
+      description: m.content
+    }));
+
+  // 5. Words
   const stopWords = new Set(['the', 'and', 'that', 'this', 'with', 'from', 'have', 'your', 'will', 'just', 'they', 'their', 'what', 'about', 'know', 'like', 'there', 'would', 'think', 'more', 'when', 'which', 'who', 'how', 'time', 'up', 'out', 'into', 'over', 'after']);
   const wordCounts: Record<string, number> = {};
   messages.slice(-5000).forEach(m => {
@@ -96,25 +129,22 @@ function extractSeeds(messages: ChatMessage[]): SeedMemories {
     .map(([word, count]) => ({ word, count }));
 
   return {
-    quotes: potentialQuotes,
+    quotes,
     milestones,
+    jokes,
+    future,
     words: topWords
   };
 }
 
 function decodeIGString(str: string): string {
-  try {
-    return decodeURIComponent(escape(str));
-  } catch (e) {
-    return str;
-  }
+  try { return decodeURIComponent(escape(str)); } catch (e) { return str; }
 }
 
 function parseJson(text: string): ChatMessage[] {
   try {
     const data = JSON.parse(text);
     const messages: ChatMessage[] = [];
-
     const findMessages = (obj: any): any[] | null => {
       if (obj && Array.isArray(obj.messages)) return obj.messages;
       if (typeof obj === 'object' && obj !== null) {
@@ -125,29 +155,19 @@ function parseJson(text: string): ChatMessage[] {
       }
       return null;
     };
-
     const rawMessages = findMessages(data);
-
     if (rawMessages) {
       for (const msg of rawMessages) {
         const sender = decodeIGString(msg.sender_name || msg.sender || "");
         const content = decodeIGString(msg.content || msg.text || msg.share?.link || msg.media?.uri || "");
         const timestamp = msg.timestamp_ms || msg.timestamp || (msg.created_at ? new Date(msg.created_at).getTime() : null);
-
         if (sender && content && timestamp) {
-          messages.push({
-            sender: String(sender),
-            timestamp: Number(timestamp),
-            content: String(content),
-          });
+          messages.push({ sender: String(sender), timestamp: Number(timestamp), content: String(content) });
         }
       }
     }
     return messages;
-  } catch (e) {
-    console.error("Failed to parse JSON", e);
-    return [];
-  }
+  } catch (e) { return []; }
 }
 
 function parseHtml(text: string): ChatMessage[] {
@@ -156,50 +176,17 @@ function parseHtml(text: string): ChatMessage[] {
     const parser = new DOMParser();
     const doc = parser.parseFromString(text, 'text/html');
     const messageBlocks = doc.querySelectorAll('.pam, ._3-95, ._2pi0, .uiBoxWhite');
-    
     if (messageBlocks.length > 0) {
       messageBlocks.forEach(block => {
         const sender = block.querySelector('h2, ._3-96, ._2pio, ._2lek, ._2lel')?.textContent?.trim();
         const content = block.querySelector('._3-95._a6-p, ._3-96._2let, ._2let, div > div > div:nth-child(2)')?.textContent?.trim();
         const timestampStr = block.querySelector('._3-94, ._2lem, ._a3sc')?.textContent?.trim();
-        
         if (sender && content && timestampStr) {
           const timestamp = new Date(timestampStr).getTime();
-          if (!isNaN(timestamp)) {
-            messages.push({ sender, content, timestamp });
-          }
+          if (!isNaN(timestamp)) messages.push({ sender, content, timestamp });
         }
       });
     }
-
-    if (messages.length === 0) {
-      const allDivs = Array.from(doc.querySelectorAll('div'));
-      for (let i = 0; i < allDivs.length; i++) {
-        const div = allDivs[i];
-        if (div.children.length === 0 && div.textContent?.trim()) {
-          const text = div.textContent.trim();
-          if (text.length > 0 && text.length < 50) {
-            const nextDiv = div.nextElementSibling;
-            const dateDiv = nextDiv?.nextElementSibling;
-            
-            if (nextDiv && dateDiv) {
-              const content = nextDiv.textContent?.trim();
-              const dateStr = dateDiv.textContent?.trim();
-              const timestamp = dateStr ? new Date(dateStr).getTime() : NaN;
-              
-              if (content && !isNaN(timestamp)) {
-                messages.push({ sender: text, content, timestamp });
-                i += 2;
-              }
-            }
-          }
-        }
-      }
-    }
-    
     return messages;
-  } catch (e) {
-    console.error("Failed to parse HTML", e);
-    return [];
-  }
+  } catch (e) { return []; }
 }

@@ -1,4 +1,4 @@
-import { ChatMessage } from "./parser";
+import { ChatMessage, SeedMemories } from "./parser";
 
 const logger = {
   info: (msg: string, data?: any) => {
@@ -64,32 +64,35 @@ function cleanJson(text: string): string {
 
 function sampleMessages(messages: ChatMessage[], totalTarget: number = 800, windowSize: number = 100): ChatMessage[] {
   if (messages.length <= totalTarget) return messages;
-
   const result: ChatMessage[] = [];
   const numWindows = Math.floor(totalTarget / windowSize);
-  
   result.push(...messages.slice(0, windowSize));
-
   for (let i = 0; i < numWindows - 2; i++) {
     const start = Math.floor(Math.random() * (messages.length - windowSize * 2)) + windowSize;
     result.push(...messages.slice(start, start + windowSize));
   }
-
   result.push(...messages.slice(-windowSize));
-
   return result.sort((a, b) => a.timestamp - b.timestamp);
 }
 
 const DEFAULT_MEMORY_DATA: Partial<MemoryData> = {
-  summary: "Our journey together, captured in words and shared moments.",
+  summary: "Our journey together, captured in words and shared moments. A beautiful first year of growth and love.",
   vibe: "Beautifully Connected",
-  highlights: [],
+  highlights: [
+    { title: "Digital Connection", description: "Every message sent was a step closer to the beautiful bond we share today." }
+  ],
   memorableQuotes: [],
   insideJokes: [],
   milestones: [],
-  futureAdventures: [],
-  superlatives: [],
-  communicationInsights: []
+  futureAdventures: [
+    { title: "New Horizons", description: "Continuing to write our story, one shared moment at a time." }
+  ],
+  superlatives: [
+    { title: "Soul Mates", winner: "Both", reason: "For building a digital sanctuary of love and understanding." }
+  ],
+  communicationInsights: [
+    { title: "Rhythmic Flow", description: "Our conversations have a unique, beautiful cadence that belongs only to us." }
+  ]
 };
 
 export async function generateMemories(
@@ -97,14 +100,13 @@ export async function generateMemories(
   apiKey: string, 
   modelName: string = 'gemini-2.0-flash',
   ollamaEndpoint?: string,
-  seeds?: any // Optional local seeds to speed up or initialize data
+  seeds?: SeedMemories | null
 ): Promise<MemoryData> {
   if (messages.length === 0) throw new Error("No messages to analyze");
 
   logger.info(`Starting deep analysis: ${messages.length} messages using ${modelName}`);
 
   const participants = Array.from(new Set(messages.map(m => m.sender)));
-  
   const sampledMessages = sampleMessages(messages, 1000, 150);
   const sampledTranscript = sampledMessages
     .filter(Boolean)
@@ -121,30 +123,19 @@ export async function generateMemories(
   const p1 = formatName(participants[0]);
   const p2 = formatName(participants[1] || '');
 
-  const prompt = `CONTEXT: You are a professional romantic storyteller creating an emotional 1st anniversary scrapbook for ${p1} and ${p2}.
+  const prompt = `CONTEXT: Emotional 1st anniversary scrapbook for ${p1} and ${p2}.
   
-  TASK: Analyze the provided transcript. The transcript contains random windows of their history.
+  TASK: Analyze the provided transcript segment and INITIAL DISCOVERIES.
   Extract a deep narrative and specific shared memories.
   
-  ${seeds ? `INITIAL DISCOVERIES (Enhance these): ${JSON.stringify(seeds)}` : ''}
+  ${seeds ? `INITIAL DISCOVERIES: ${JSON.stringify(seeds)}` : ''}
 
-  OUTPUT INSTRUCTIONS:
-  - Respond with a SINGLE JSON OBJECT only.
-  - "summary": A long, poetic 3-paragraph summary of their year (approx 200 words).
-  - "vibe": A catchy 3-word aesthetic description.
-  - "highlights": 5 key shared moments.
-  - "memorableQuotes": 5 verbatim quotes with context.
-  - "insideJokes": 5 jokes they share.
-  - "milestones": 5 key dates or phases.
-  - "futureAdventures": 5 future plans.
-  - "superlatives": 5 awards.
-  - "communicationInsights": 5 observations.
-  - "topEmojis": The top 5 emojis.
-
+  OUTPUT: Response with a SINGLE JSON OBJECT. POETIC AND DETAILED.
+  
   Structure:
   {
-    "summary": "...",
-    "vibe": "...",
+    "summary": "Poetic 3-paragraph summary...",
+    "vibe": "3-word description...",
     "highlights": [{"title": "...", "description": "..."}],
     "memorableQuotes": [{"sender": "...", "text": "...", "context": "..."}],
     "insideJokes": [{"joke": "...", "origin": "..."}],
@@ -152,53 +143,31 @@ export async function generateMemories(
     "futureAdventures": [{"title": "...", "description": "..."}],
     "superlatives": [{"title": "...", "winner": "...", "reason": "..."}],
     "communicationInsights": [{"title": "...", "description": "..."}],
-    "topEmojis": ["❤️", "...", "..."]
+    "topEmojis": ["❤️", "..."]
   }
 
   Transcript:\n${sampledTranscript}`;
 
   try {
     let aiData: any;
-
     if (modelName.startsWith('ollama:')) {
       const actualModel = modelName.slice(7);
       const endpoint = (ollamaEndpoint || 'http://localhost:11434').replace(/\/$/, '');
-      logger.info(`Calling Ollama directly at ${endpoint}...`);
-      
       const response = await fetch(`${endpoint}/api/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: actualModel,
-          prompt: prompt + "\n\nRETURN ONLY RAW JSON. NO MARKDOWN.",
-          stream: false,
-          format: 'json'
-        })
+        body: JSON.stringify({ model: actualModel, prompt: prompt + "\n\nRETURN ONLY RAW JSON.", stream: false, format: 'json' })
       });
-
-      if (!response.ok) {
-        const errText = await response.text();
-        throw new Error(`Ollama Direct Error: ${errText}`);
-      }
-
+      if (!response.ok) throw new Error("Ollama Failure");
       const raw = await response.json();
       aiData = JSON.parse(cleanJson(raw.response));
     } else {
-      logger.info("Awaiting response from Integrated AI Proxy...");
       const response = await fetch(PROXY_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt, modelName, apiKey: apiKey.trim() })
       });
-
-      if (!response.ok) {
-        const errData = await response.json();
-        if (response.status === 422) {
-          throw new Error("This part of your story is too soulful for the current AI settings. Please try another model!");
-        }
-        throw new Error(errData.error || "Integrated Proxy Error");
-      }
-
+      if (!response.ok) throw new Error("Integrated Proxy Error");
       aiData = await response.json();
     }
 
@@ -216,9 +185,14 @@ export async function generateMemories(
 
     const topWords = seeds?.words || [];
 
-    return {
+    // MERGE AI DATA WITH LOCAL SEEDS TO PREVENT BLANKS
+    const finalData = {
       ...DEFAULT_MEMORY_DATA,
       ...aiData,
+      memorableQuotes: (aiData.memorableQuotes?.length > 0) ? aiData.memorableQuotes : (seeds?.quotes || []),
+      milestones: (aiData.milestones?.length > 0) ? aiData.milestones : (seeds?.milestones || []),
+      insideJokes: (aiData.insideJokes?.length > 0) ? aiData.insideJokes : (seeds?.jokes || []),
+      futureAdventures: (aiData.futureAdventures?.length > 0) ? aiData.futureAdventures : (seeds?.future || []),
       participants,
       firstMessage: {
         date: new Date(messages[0].timestamp).toISOString(),
@@ -236,6 +210,8 @@ export async function generateMemories(
         avgResponseTime: {}
       }
     };
+
+    return finalData;
   } catch (e) {
     logger.error("Analysis Pipeline Failure", e);
     throw e;
@@ -251,11 +227,9 @@ export async function generateMoreItems(
   ollamaEndpoint?: string
 ) {
   if (messages.length === 0) return [];
-
   try {
     const sampledMessages = sampleMessages(messages, 600, 200);
     const sampledTranscript = sampledMessages.map(m => `[${m.sender}]: ${m.content}`).join('\n');
-    
     let itemSchema = "";
     if (category === 'memorableQuotes') itemSchema = `{"sender": "...", "text": "...", "context": "..."}`;
     else if (category === 'highlights') itemSchema = `{"title": "...", "description": "..."}`;
@@ -265,28 +239,19 @@ export async function generateMoreItems(
     else if (category === 'superlatives') itemSchema = `{"title": "...", "winner": "...", "reason": "..."}`;
     else if (category === 'communicationInsights') itemSchema = `{"title": "...", "description": "..."}`;
 
-    const prompt = `TASK: Find 5 NEW unique shared ${category} from this random history segment. 
-    
-    EXISTING (DO NOT REPEAT): ${JSON.stringify(existingItems.map(i => i.title || i.text || i.joke).slice(-10))}
-    
-    OUTPUT: A JSON list of 5 objects matching this schema: ${itemSchema}
-    
+    const prompt = `TASK: Find 5 NEW unique shared ${category} from this random segments. 
+    EXISTING (DO NOT REPEAT): ${JSON.stringify(existingItems.map(i => i.title || i.text || i.joke).slice(-15))}
+    OUTPUT: JSON list of 5 objects matching: ${itemSchema}
     Transcript:\n${sampledTranscript}`;
     
     let result: any;
-
     if (modelName.startsWith('ollama:')) {
       const actualModel = modelName.slice(7);
       const endpoint = (ollamaEndpoint || 'http://localhost:11434').replace(/\/$/, '');
       const response = await fetch(`${endpoint}/api/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: actualModel,
-          prompt: prompt + "\n\nRETURN ONLY RAW JSON LIST. NO MARKDOWN.",
-          stream: false,
-          format: 'json'
-        })
+        body: JSON.stringify({ model: actualModel, prompt: prompt + "\n\nRETURN ONLY RAW JSON LIST.", stream: false, format: 'json' })
       });
       if (!response.ok) return [];
       const raw = await response.json();
@@ -297,14 +262,9 @@ export async function generateMoreItems(
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt, modelName, apiKey: apiKey.trim() })
       });
-
       if (!response.ok) return [];
       result = await response.json();
     }
-
     return Array.isArray(result) ? result : [];
-  } catch (e) {
-    logger.error(`Failed to generate more ${category}`, e);
-    return [];
-  }
+  } catch (e) { return []; }
 }

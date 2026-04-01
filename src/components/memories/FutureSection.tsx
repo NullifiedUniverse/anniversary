@@ -20,16 +20,16 @@ export function FutureSection({
   onLoadMoreAdventures,
   onLoadMoreSuperlatives
 }: FutureSectionProps) {
-  const { ref: adventuresRef, inView: adventuresInView } = useInView({ threshold: 0.1 });
-  const { ref: superlativesRef, inView: superlativesInView } = useInView({ threshold: 0.1 });
+  const { ref: adventuresRef, inView: adventuresInView } = useInView({ threshold: 0.1, rootMargin: '400px' });
+  const { ref: superlativesRef, inView: superlativesInView } = useInView({ threshold: 0.1, rootMargin: '400px' });
 
   useEffect(() => {
-    if (adventuresInView) onLoadMoreAdventures();
-  }, [adventuresInView]);
+    if (adventuresInView && !loadingAdventures) onLoadMoreAdventures();
+  }, [adventuresInView, loadingAdventures]);
 
   useEffect(() => {
-    if (superlativesInView) onLoadMoreSuperlatives();
-  }, [superlativesInView]);
+    if (superlativesInView && !loadingSuperlatives) onLoadMoreSuperlatives();
+  }, [superlativesInView, loadingSuperlatives]);
 
   const formatName = (name: string) => {
     if (!name) return "Unknown";
@@ -45,12 +45,12 @@ export function FutureSection({
       id="future"
       initial="hidden" 
       whileInView="show" 
-      viewport={{ once: true, margin: "-100px" }}
+      viewport={{ once: false, margin: "-20px" }}
       variants={{ hidden: { opacity: 0 }, show: { opacity: 1 } }}
-      className="max-w-5xl mx-auto space-y-32 py-20"
+      className="max-w-5xl mx-auto space-y-32 py-20 min-h-[600px]"
     >
       {/* Superlatives / Awards */}
-      <section>
+      <section className="min-h-[300px]">
         <div className="text-center mb-16 space-y-4">
           <div className="inline-flex items-center justify-center p-4 bg-gray-900/40 rounded-full mb-4 shadow-sm border border-yellow-900/20">
             <Trophy className="w-8 h-8 text-yellow-400" />
@@ -60,7 +60,7 @@ export function FutureSection({
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {superlatives.map((s, i) => (
+          {superlatives.length > 0 ? superlatives.map((s, i) => (
             <motion.div 
               key={i}
               variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } }}
@@ -77,7 +77,11 @@ export function FutureSection({
               </div>
               <p className="text-lg text-gray-400 leading-relaxed font-medium italic">"{s.reason}"</p>
             </motion.div>
-          ))}
+          )) : (
+            <div className="col-span-full text-center py-20 bg-white/[0.02] rounded-[4rem] border border-dashed border-white/5">
+               <p className="text-gray-600 italic">Awarding our most soulful moments...</p>
+            </div>
+          )}
         </div>
         <div ref={superlativesRef} className="flex justify-center py-12">
           {loadingSuperlatives && <Loader2 className="w-8 h-8 text-yellow-500 animate-spin" />}
@@ -85,7 +89,7 @@ export function FutureSection({
       </section>
 
       {/* Future Adventures */}
-      <section>
+      <section className="min-h-[300px]">
         <div className="text-center mb-16 space-y-4">
           <div className="inline-flex items-center justify-center p-4 bg-gray-900/40 rounded-full mb-4 shadow-sm border border-pink-900/20">
             <Compass className="w-8 h-8 text-pink-400" />
@@ -95,7 +99,7 @@ export function FutureSection({
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {adventures.map((a, i) => (
+          {adventures.length > 0 ? adventures.map((a, i) => (
             <motion.div 
               key={i}
               variants={{ hidden: { opacity: 0, scale: 0.95 }, show: { opacity: 1, scale: 1 } }}
@@ -105,7 +109,11 @@ export function FutureSection({
               <h4 className="text-2xl font-black text-gray-100 mb-4">{a.title}</h4>
               <p className="text-gray-400 font-medium">{a.description}</p>
             </motion.div>
-          ))}
+          )) : (
+            <div className="col-span-full text-center py-20 bg-white/[0.02] rounded-[4rem] border border-dashed border-white/5">
+               <p className="text-gray-600 italic">Dreaming of our next chapters...</p>
+            </div>
+          )}
         </div>
         <div ref={adventuresRef} className="flex justify-center py-12">
           {loadingAdventures && <Loader2 className="w-8 h-8 text-pink-500 animate-spin" />}
