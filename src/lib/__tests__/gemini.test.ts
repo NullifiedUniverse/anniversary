@@ -42,7 +42,7 @@ describe('gemini lib', () => {
       '/api/analyze',
       expect.objectContaining({
         method: 'POST',
-        body: expect.stringContaining('romantic'),
+        body: expect.stringContaining('anniversary'),
       })
     );
     expect(result.summary).toBeDefined();

@@ -38,16 +38,16 @@
     - [ ] Implement: Persistence of model choice in state.
 - [ ] Task: Conductor - User Manual Verification 'Phase 4' (Protocol in workflow.md)
 
-## Phase 5: Cinematic Perfection & Massive Data Rigor
-- [ ] Task: Rigorous Pre-processing Expansion
-    - [ ] Implement: Expand `scripts/pre-parse.ts` to extract 100+ quotes and 50+ milestones.
-    - [ ] Implement: Add local "Sentiment Bursts" detection (high density of emotional keywords).
-    - [ ] Implement: Add "Time-of-Day" narrative seeds (e.g., "The Twilight Hours").
-- [ ] Task: Premium Visual Storytelling
-    - [ ] Implement: Add a glowing "Story Line" connector that traces the scroll path.
-    - [ ] Implement: Add Parallax depth effects to section backgrounds.
-    - [ ] Implement: Poetic "Chapter Transitions" with unique typography.
-- [ ] Task: Model-Specific Prompt Tuning
-    - [ ] Implement: Rigid JSON-only formatting for local Ollama models.
-    - [ ] Implement: "Proactive" infinite loading (buffer next batch before trigger).
-- [ ] Task: Conductor - User Manual Verification 'Phase 5' (Protocol in workflow.md)
+## Phase 5: Cinematic Perfection & Massive Data Rigor [checkpoint: 36dfe42]
+- [x] Task: Rigorous Pre-processing Expansion (36dfe42)
+    - [x] Implement: Expand `scripts/pre-parse.ts` to extract 100+ quotes and 50+ milestones.
+    - [x] Implement: Add local "Sentiment Bursts" detection (high density of emotional keywords).
+    - [x] Implement: Add "Time-of-Day" narrative seeds (e.g., "The Twilight Hours").
+- [x] Task: Premium Visual Storytelling (36dfe42)
+    - [x] Implement: Add a glowing "Story Line" connector that traces the scroll path.
+    - [x] Implement: Add Parallax depth effects to section backgrounds.
+    - [x] Implement: Poetic "Chapter Transitions" with unique typography.
+- [x] Task: Model-Specific Prompt Tuning (36dfe42)
+    - [x] Implement: Rigid JSON-only formatting for local Ollama models.
+    - [x] Implement: "Proactive" infinite loading (buffer next batch before trigger).
+- [x] Task: Conductor - User Manual Verification 'Phase 5' (Protocol in workflow.md) (36dfe42)
