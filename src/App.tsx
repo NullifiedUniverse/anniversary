@@ -118,7 +118,9 @@ export default function App() {
 
   const runAnalysis = async (messages: ChatMessage[], apiKey: string, modelName: string, ollamaEndpoint: string) => {
     try {
-      console.log(`[App] 🚀 Commencing Analysis Flow... | Model: ${modelName}`);
+      console.log(`[App] 🚀 Commencing Analysis Flow... | Model: ${modelName || 'gemini-2.0-flash'}`);
+      const actualModel = modelName || 'gemini-2.0-flash';
+      
       setState(prev => ({ ...prev, status: 'analyzing', rawMessages: messages }));
       
       updateStep('load', 'complete');
@@ -131,7 +133,7 @@ export default function App() {
       updateStep('sample', 'complete');
       
       updateStep('ai', 'loading');
-      const memoryData = await generateMemories(messages, apiKey, modelName, ollamaEndpoint);
+      const memoryData = await generateMemories(messages, apiKey, actualModel, ollamaEndpoint);
       
       updateStep('ai', 'complete');
       updateStep('render', 'loading');

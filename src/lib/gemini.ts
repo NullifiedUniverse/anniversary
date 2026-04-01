@@ -1,15 +1,14 @@
 import { ChatMessage } from "./parser";
 
-// Explicitly define the logger to avoid any runtime errors
 const logger = {
   info: (msg: string, data?: any) => {
-    console.log(`[Gemini Pipeline] ℹ️ ${msg}`, data || '');
+    console.log(`[AI Pipeline] ℹ️ ${msg}`, data || '');
   },
   error: (msg: string, err?: any) => {
-    console.error(`[Gemini Pipeline] ❌ ${msg}`, err || '');
+    console.error(`[AI Pipeline] ❌ ${msg}`, err || '');
   },
   success: (msg: string) => {
-    console.log(`[Gemini Pipeline] ✅ ${msg}`);
+    console.log(`[AI Pipeline] ✅ ${msg}`);
   }
 };
 
@@ -43,13 +42,30 @@ export interface MemoryData {
 
 const PROXY_URL = '/api/analyze';
 
+function cleanJson(text: string): string {
+  let clean = text.trim();
+  if (clean.includes('```')) {
+    // Extract JSON from code blocks if present
+    const match = clean.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+    if (match) clean = match[1];
+  }
+  // Remove any remaining preamble/postamble
+  const start = clean.indexOf('{');
+  const end = clean.lastIndexOf('}');
+  if (start !== -1 && end !== -1) {
+    clean = clean.substring(start, end + 1);
+  }
+  return clean;
+}
+
 export async function generateMemories(
   messages: ChatMessage[], 
   apiKey: string, 
-  modelName: string = 'gemini-2.0-flash',
+  modelName: string,
   ollamaEndpoint?: string
 ): Promise<MemoryData> {
   if (messages.length === 0) throw new Error("No messages to analyze");
+  if (!modelName) modelName = 'gemini-2.0-flash';
 
   logger.info(`Starting analysis: ${messages.length} messages using ${modelName}`);
 
@@ -83,25 +99,70 @@ export async function generateMemories(
   const p1 = formatName(participants[0]);
   const p2 = formatName(participants[1] || '');
 
-  const prompt = `You are a romantic storyteller. Analyze this chat history for ${p1} and ${p2}'s anniversary. Create a romantic summary. Use their names. Transcript:\n${sampledTranscript}`;
+  const prompt = `You are a romantic storyteller. Analyze this chat history for ${p1} and ${p2}'s anniversary. Create a romantic summary. 
+  
+  IMPORTANT: You must respond with valid JSON only.
+  
+  Structure:
+  {
+    "summary": "...",
+    "vibe": "...",
+    "highlights": [{"title": "...", "description": "..."}],
+    "memorableQuotes": [{"sender": "...", "text": "...", "context": "..."}],
+    "insideJokes": [{"joke": "...", "origin": "..."}],
+    "milestones": [{"title": "...", "description": "...", "date": "..."}],
+    "futureAdventures": [{"title": "...", "description": "..."}],
+    "superlatives": [{"title": "...", "winner": "...", "reason": "..."}],
+    "communicationInsights": [{"title": "...", "description": "..."}]
+  }
+
+  Transcript:\n${sampledTranscript}`;
 
   try {
-    logger.info("Awaiting response from Integrated AI Proxy...");
-    const response = await fetch(PROXY_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt, modelName, apiKey: apiKey.trim(), ollamaEndpoint })
-    });
+    let aiData: any;
 
-    if (!response.ok) {
-      const errData = await response.json();
-      throw new Error(errData.error || "Integrated Proxy Error");
+    if (modelName.startsWith('ollama:')) {
+      const actualModel = modelName.slice(7);
+      const endpoint = (ollamaEndpoint || 'http://localhost:11434').replace(/\/$/, '');
+      logger.info(`Calling Ollama directly at ${endpoint}...`);
+      
+      const response = await fetch(`${endpoint}/api/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: actualModel,
+          prompt: prompt + "\n\nRETURN ONLY RAW JSON. NO MARKDOWN. NO CONVERSATION.",
+          stream: false,
+          format: 'json'
+        })
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(`Ollama Direct Error: ${errText}`);
+      }
+
+      const raw = await response.json();
+      aiData = JSON.parse(cleanJson(raw.response));
+    } else {
+      logger.info("Awaiting response from Integrated Proxy...");
+      const response = await fetch(PROXY_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt, modelName, apiKey: apiKey.trim() })
+      });
+
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.error || "Integrated Proxy Error");
+      }
+
+      aiData = await response.json();
     }
 
-    const aiData = await response.json();
-    logger.success("Success.");
+    logger.success("AI Generation Complete.");
 
-    // Stats
+    // Extract stats locally
     const senderCounts: Record<string, number> = {};
     messages.forEach(m => { senderCounts[m.sender] = (senderCounts[m.sender] || 0) + 1; });
     const mostActivePerson = Object.entries(senderCounts).sort((a, b) => b[1] - a[1])[0][0];
@@ -132,7 +193,7 @@ export async function generateMemories(
       stats: {
         totalMessages: messages.length,
         mostActivePerson,
-        topEmojis: []
+        topEmojis: aiData.topEmojis || ["❤️", "✨", "😊"]
       },
       extendedStats: {
         messagesByHour,
@@ -141,7 +202,7 @@ export async function generateMemories(
       }
     };
   } catch (e) {
-    logger.error("Integrated Analysis Failure", e);
+    logger.error("Analysis Pipeline Failure", e);
     throw e;
   }
 }
@@ -151,22 +212,42 @@ export async function generateMoreItems(
   category: string,
   existingItems: any[],
   apiKey: string,
-  modelName: string = 'gemini-2.0-flash',
+  modelName: string,
   ollamaEndpoint?: string
 ) {
   if (messages.length === 0) return [];
+  if (!modelName) modelName = 'gemini-2.0-flash';
+
   try {
     const sampledTranscript = messages.slice(-200).map(m => `[${m.sender}]: ${m.content}`).join('\n');
     const prompt = `Generate 5 more unique ${category} for this couple. Do not repeat: ${JSON.stringify(existingItems)}\n\nMessages:\n${sampledTranscript}`;
     
-    const response = await fetch(PROXY_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt, modelName, apiKey: apiKey.trim(), ollamaEndpoint })
-    });
+    if (modelName.startsWith('ollama:')) {
+      const actualModel = modelName.slice(7);
+      const endpoint = (ollamaEndpoint || 'http://localhost:11434').replace(/\/$/, '');
+      const response = await fetch(`${endpoint}/api/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: actualModel,
+          prompt: prompt + "\n\nRETURN ONLY RAW JSON LIST. NO MARKDOWN.",
+          stream: false,
+          format: 'json'
+        })
+      });
+      if (!response.ok) return [];
+      const raw = await response.json();
+      return JSON.parse(cleanJson(raw.response));
+    } else {
+      const response = await fetch(PROXY_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt, modelName, apiKey: apiKey.trim() })
+      });
 
-    if (!response.ok) throw new Error("Integrated Proxy Error");
-    return await response.json();
+      if (!response.ok) throw new Error("Integrated Proxy Error");
+      return await response.json();
+    }
   } catch (e) {
     logger.error(`Failed to generate more ${category}`, e);
     return [];
