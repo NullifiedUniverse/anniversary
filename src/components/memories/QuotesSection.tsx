@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Quote, TrendingUp, Loader2, Heart } from 'lucide-react';
+import { Quote, TrendingUp, Loader2 } from 'lucide-react';
 import { useInView } from 'react-intersection-observer';
 
 interface QuotesSectionProps {
@@ -28,13 +28,13 @@ export function QuotesSection({
   onLoadMoreInsights,
   onLoadMoreJokes
 }: QuotesSectionProps) {
-  const { ref: quotesRef, inView: quotesInView } = useInView({ threshold: 0.1 });
-  const { ref: insightsRef, inView: insightsInView } = useInView({ threshold: 0.1 });
-  const { ref: jokesRef, inView: jokesInView } = useInView({ threshold: 0.1 });
+  const { ref: quotesRef, inView: quotesInView } = useInView({ threshold: 0.5, rootMargin: '100px' });
+  const { ref: insightsRef, inView: insightsInView } = useInView({ threshold: 0.5, rootMargin: '100px' });
+  const { ref: jokesRef, inView: jokesInView } = useInView({ threshold: 0.5, rootMargin: '100px' });
 
-  useEffect(() => { if (quotesInView) onLoadMoreQuotes(); }, [quotesInView]);
-  useEffect(() => { if (insightsInView) onLoadMoreInsights(); }, [insightsInView]);
-  useEffect(() => { if (jokesInView) onLoadMoreJokes(); }, [jokesInView]);
+  useEffect(() => { if (quotesInView && !loadingQuotes) onLoadMoreQuotes(); }, [quotesInView, loadingQuotes]);
+  useEffect(() => { if (insightsInView && !loadingInsights) onLoadMoreInsights(); }, [insightsInView, loadingInsights]);
+  useEffect(() => { if (jokesInView && !loadingJokes) onLoadMoreJokes(); }, [jokesInView, loadingJokes]);
 
   const formatName = (name: string) => {
     if (!name) return "Unknown";
@@ -46,9 +46,9 @@ export function QuotesSection({
   };
 
   return (
-    <div id="moments" className="max-w-[1400px] mx-auto space-y-32 px-4 pb-20">
+    <div id="moments" className="max-w-[1400px] mx-auto space-y-32 px-4 pb-20 min-h-[400px]">
       {/* Cinematic Quotes */}
-      <section>
+      <section className="min-h-[300px]">
         <div className="text-center mb-32 space-y-6">
           <motion.div initial={{ scale: 0 }} whileInView={{ scale: 1 }} viewport={{ margin: "-20px" }} className="inline-flex items-center justify-center p-5 bg-indigo-500/10 rounded-3xl mb-6 border border-indigo-500/20 shadow-2xl">
             <Quote className="w-10 h-10 text-indigo-400" />
@@ -58,7 +58,7 @@ export function QuotesSection({
         </div>
         
         <div className="space-y-32">
-          {quotes.map((quote, index) => {
+          {quotes.length > 0 ? quotes.map((quote, index) => {
             const isP1 = quote.sender === participants[0];
             
             return (
@@ -95,16 +95,18 @@ export function QuotesSection({
                 </div>
               </motion.div>
             );
-          })}
+          }) : (
+            <div className="text-center text-gray-600 font-medium italic py-12">Listening for our shared echoes...</div>
+          )}
           
-          <div ref={quotesRef} className="flex justify-center py-24">
+          <div ref={quotesRef} className="flex justify-center py-24 min-h-[100px]">
             {loadingQuotes && <Loader2 className="w-10 h-10 text-indigo-500 animate-spin" />}
           </div>
         </div>
       </section>
 
       {/* Connection Insights */}
-      <section>
+      <section className="min-h-[300px]">
         <div className="text-center mb-32 space-y-6">
           <motion.div initial={{ scale: 0 }} whileInView={{ scale: 1 }} viewport={{ margin: "-20px" }} className="inline-flex items-center justify-center p-5 bg-amber-500/10 rounded-3xl mb-6 border border-amber-500/20 shadow-2xl">
             <TrendingUp className="w-10 h-10 text-amber-400" />
@@ -114,12 +116,12 @@ export function QuotesSection({
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-          {insights.map((insight, i) => (
+          {insights.length > 0 ? insights.map((insight, i) => (
             <motion.div 
               key={i} 
               initial={{ opacity: 0, scale: 0.95 }}
               whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: false, margin: "-20px" }}
+              viewport={{ margin: "-20px" }}
               whileHover={{ y: -12, scale: 1.02 }}
               className="bg-white/5 backdrop-blur-3xl p-16 rounded-[4rem] border border-white/10 group transition-all duration-700"
             >
@@ -129,15 +131,17 @@ export function QuotesSection({
               <h4 className="text-4xl font-black text-white mb-6 group-hover:text-amber-300 transition-colors tracking-tight">{insight.title}</h4>
               <p className="text-xl text-gray-400 leading-relaxed font-medium">{insight.description}</p>
             </motion.div>
-          ))}
+          )) : (
+            <div className="col-span-full text-center text-gray-600 font-medium italic py-12">Mapping the rhythm of our connection...</div>
+          )}
         </div>
-        <div ref={insightsRef} className="flex justify-center py-24">
+        <div ref={insightsRef} className="flex justify-center py-24 min-h-[100px]">
           {loadingInsights && <Loader2 className="w-10 h-10 text-amber-500 animate-spin" />}
         </div>
       </section>
 
       {/* Shared Smiles */}
-      <section>
+      <section className="min-h-[300px]">
         <div className="text-center mb-32 space-y-6">
           <motion.div initial={{ scale: 0 }} whileInView={{ scale: 1 }} viewport={{ margin: "-20px" }} className="inline-flex items-center justify-center p-5 bg-pink-500/10 rounded-3xl mb-6 border border-pink-500/20 shadow-2xl">
             <span className="text-5xl">🤭</span>
@@ -147,12 +151,12 @@ export function QuotesSection({
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {jokes.map((joke, i) => (
+          {jokes.length > 0 ? jokes.map((joke, i) => (
             <motion.div 
               key={i}
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: false, margin: "-20px" }}
+              viewport={{ margin: "-20px" }}
               whileHover={{ y: -8 }}
               className="bg-white/5 backdrop-blur-2xl p-12 rounded-[3rem] border border-white/5 shadow-2xl group transition-all duration-500"
             >
@@ -161,9 +165,11 @@ export function QuotesSection({
               <div className="h-px w-12 bg-white/10 mb-6" />
               <p className="text-sm font-black uppercase tracking-[0.2em] text-gray-500">Origin: {joke.origin}</p>
             </motion.div>
-          ))}
+          )) : (
+            <div className="col-span-full text-center text-gray-600 font-medium italic py-12">Recalling our secret smiles...</div>
+          )}
         </div>
-        <div ref={jokesRef} className="flex justify-center py-24">
+        <div ref={jokesRef} className="flex justify-center py-24 min-h-[100px]">
           {loadingJokes && <Loader2 className="w-10 h-10 text-pink-500 animate-spin" />}
         </div>
       </section>

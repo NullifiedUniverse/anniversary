@@ -53,8 +53,28 @@ function cleanJson(text: string): string {
   if (start !== -1 && end !== -1) {
     clean = clean.substring(start, end + 1);
   }
+  // If it's a list (for generateMoreItems)
+  if (clean.startsWith('[') && clean.endsWith(']')) return clean;
+  // Fallback if no {} found but starts with [
+  const listStart = clean.indexOf('[');
+  const listEnd = clean.lastIndexOf(']');
+  if (listStart !== -1 && listEnd !== -1 && (start === -1 || listStart < start)) {
+    return clean.substring(listStart, listEnd + 1);
+  }
   return clean;
 }
+
+const DEFAULT_MEMORY_DATA: Partial<MemoryData> = {
+  summary: "Our journey together, captured in words and shared moments.",
+  vibe: "Beautifully Connected",
+  highlights: [],
+  memorableQuotes: [],
+  insideJokes: [],
+  milestones: [],
+  futureAdventures: [],
+  superlatives: [],
+  communicationInsights: []
+};
 
 export async function generateMemories(
   messages: ChatMessage[], 
@@ -95,24 +115,36 @@ export async function generateMemories(
   const p1 = formatName(participants[0]);
   const p2 = formatName(participants[1] || '');
 
-  // CONTEXTUAL PROMPT REFINEMENT: Emphasize wholesome romantic context to bypass false-positive safety filters
-  const prompt = `CONTEXT: You are a romantic digital storyteller creating a wholesome 1st anniversary scrapbook for a loving couple, ${p1} and ${p2}. This is a private, retrospective gift. The chat history contains their daily conversations, jokes, and shared moments. 
+  const prompt = `CONTEXT: You are a professional romantic storyteller creating a deep, emotional 1st anniversary scrapbook for ${p1} and ${p2}. This is a private retrospective.
   
-  TASK: Analyze the provided transcript and extract the essence of their journey into a JSON narrative. Focus on growth, affection, and shared history.
+  TASK: Analyze the provided transcript. Extract a deep narrative and specific shared memories.
   
-  IMPORTANT: You must respond with valid JSON only. Avoid any content that would trigger safety filters unnecessarily; focus on the beauty of their connection.
-  
+  OUTPUT INSTRUCTIONS:
+  - Respond with a SINGLE JSON OBJECT only.
+  - DO NOT omit any fields.
+  - "summary": A long, poetic 3-paragraph summary of their year (approx 200 words).
+  - "vibe": A short, catchy 3-5 word aesthetic description.
+  - "highlights": 5 key shared moments.
+  - "memorableQuotes": 5 emotional or funny verbatim quotes with context.
+  - "insideJokes": 5 jokes they share.
+  - "milestones": 5 key dates or phases in their relationship.
+  - "futureAdventures": 5 things they should do next based on their talks.
+  - "superlatives": 5 awards (e.g. "Best Listener").
+  - "communicationInsights": 5 observations on how they talk to each other.
+  - "topEmojis": The top 5 emojis they use.
+
   Structure:
   {
     "summary": "...",
     "vibe": "...",
     "highlights": [{"title": "...", "description": "..."}],
-    "memorableQuotes": [{"sender": "...", "text": "...", "context": "..."}],
+    "memorableQuotes": [{"sender": "${participants[0]} or ${participants[1]}", "text": "...", "context": "..."}],
     "insideJokes": [{"joke": "...", "origin": "..."}],
     "milestones": [{"title": "...", "description": "...", "date": "..."}],
     "futureAdventures": [{"title": "...", "description": "..."}],
     "superlatives": [{"title": "...", "winner": "...", "reason": "..."}],
-    "communicationInsights": [{"title": "...", "description": "..."}]
+    "communicationInsights": [{"title": "...", "description": "..."}],
+    "topEmojis": ["❤️", "...", "..."]
   }
 
   Transcript:\n${sampledTranscript}`;
@@ -144,7 +176,7 @@ export async function generateMemories(
       const raw = await response.json();
       aiData = JSON.parse(cleanJson(raw.response));
     } else {
-      logger.info("Awaiting response from Integrated Proxy...");
+      logger.info("Awaiting response from Integrated AI Proxy...");
       const response = await fetch(PROXY_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -153,7 +185,6 @@ export async function generateMemories(
 
       if (!response.ok) {
         const errData = await response.json();
-        // If the error is specifically safety-related, we provide a more romantic explanation
         if (response.status === 422) {
           throw new Error("This part of your story is too soulful for the current AI settings. Please try another model!");
         }
@@ -185,6 +216,7 @@ export async function generateMemories(
     const topWords = Object.entries(wordCounts).sort((a, b) => b[1] - a[1]).slice(0, 50).map(([word, count]) => ({ word, count }));
 
     return {
+      ...DEFAULT_MEMORY_DATA,
       ...aiData,
       participants,
       firstMessage: {
@@ -195,7 +227,7 @@ export async function generateMemories(
       stats: {
         totalMessages: messages.length,
         mostActivePerson,
-        topEmojis: aiData.topEmojis || ["❤️", "✨", "😊"]
+        topEmojis: aiData.topEmojis || ["❤️", "✨", "😊", "😂", "🥰"]
       },
       extendedStats: {
         messagesByHour,
@@ -220,11 +252,30 @@ export async function generateMoreItems(
   if (messages.length === 0) return [];
 
   try {
-    const sampledTranscript = messages.slice(-200).map(m => `[${m.sender}]: ${m.content}`).join('\n');
-    const prompt = `CONTEXT: Wholesome anniversary scrapbook for a loving couple.
+    const sampledTranscript = messages.slice(-300).map(m => `[${m.sender}]: ${m.content}`).join('\n');
     
-    TASK: Generate 5 more unique ${category} from these messages. Focus on positive, romantic, and funny shared history. Do not repeat: ${JSON.stringify(existingItems)}\n\nMessages:\n${sampledTranscript}`;
+    // Explicit format request per category
+    let itemSchema = "";
+    if (category === 'memorableQuotes') itemSchema = `{"sender": "...", "text": "...", "context": "..."}`;
+    else if (category === 'highlights') itemSchema = `{"title": "...", "description": "..."}`;
+    else if (category === 'insideJokes') itemSchema = `{"joke": "...", "origin": "..."}`;
+    else if (category === 'milestones') itemSchema = `{"title": "...", "description": "...", "date": "..."}`;
+    else if (category === 'futureAdventures') itemSchema = `{"title": "...", "description": "..."}`;
+    else if (category === 'superlatives') itemSchema = `{"title": "...", "winner": "...", "reason": "..."}`;
+    else if (category === 'communicationInsights') itemSchema = `{"title": "...", "description": "..."}`;
+
+    const prompt = `CONTEXT: Anniversary scrapbook for a loving couple.
     
+    TASK: Find 5 NEW unique shared ${category} from the chat. 
+    
+    EXISTING (DO NOT REPEAT): ${JSON.stringify(existingItems.map(i => i.title || i.text || i.joke))}
+    
+    OUTPUT: A JSON list of 5 objects matching this schema: ${itemSchema}
+    
+    Transcript:\n${sampledTranscript}`;
+    
+    let result: any;
+
     if (modelName.startsWith('ollama:')) {
       const actualModel = modelName.slice(7);
       const endpoint = (ollamaEndpoint || 'http://localhost:11434').replace(/\/$/, '');
@@ -240,7 +291,7 @@ export async function generateMoreItems(
       });
       if (!response.ok) return [];
       const raw = await response.json();
-      return JSON.parse(cleanJson(raw.response));
+      result = JSON.parse(cleanJson(raw.response));
     } else {
       const response = await fetch(PROXY_URL, {
         method: 'POST',
@@ -248,13 +299,11 @@ export async function generateMoreItems(
         body: JSON.stringify({ prompt, modelName, apiKey: apiKey.trim() })
       });
 
-      if (!response.ok) {
-        // Log and return empty array for infinite scroll failures due to safety blocks
-        console.warn(`[AI Pipeline] More items skipped for ${category} due to status ${response.status}`);
-        return [];
-      }
-      return await response.json();
+      if (!response.ok) return [];
+      result = await response.json();
     }
+
+    return Array.isArray(result) ? result : [];
   } catch (e) {
     logger.error(`Failed to generate more ${category}`, e);
     return [];

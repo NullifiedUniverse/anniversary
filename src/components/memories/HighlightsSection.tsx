@@ -20,21 +20,33 @@ export function HighlightsSection({
   onLoadMoreHighlights,
   onLoadMoreMilestones
 }: HighlightsSectionProps) {
-  const { ref: highlightsRef, inView: highlightsInView } = useInView({ threshold: 0.1 });
-  const { ref: milestonesRef, inView: milestonesInView } = useInView({ threshold: 0.1 });
+  // Use rootMargin and higher threshold for more reliable trigger
+  const { ref: highlightsRef, inView: highlightsInView } = useInView({ 
+    threshold: 0.5,
+    rootMargin: '100px',
+  });
+  
+  const { ref: milestonesRef, inView: milestonesInView } = useInView({ 
+    threshold: 0.5,
+    rootMargin: '100px',
+  });
 
   useEffect(() => {
-    if (highlightsInView) onLoadMoreHighlights();
-  }, [highlightsInView]);
+    if (highlightsInView && !loadingHighlights) {
+      onLoadMoreHighlights();
+    }
+  }, [highlightsInView, loadingHighlights]);
 
   useEffect(() => {
-    if (milestonesInView) onLoadMoreMilestones();
-  }, [milestonesInView]);
+    if (milestonesInView && !loadingMilestones) {
+      onLoadMoreMilestones();
+    }
+  }, [milestonesInView, loadingMilestones]);
 
   return (
-    <div id="highlights" className="max-w-[1400px] mx-auto space-y-32 px-4">
+    <div id="highlights" className="max-w-[1400px] mx-auto space-y-32 px-4 min-h-[400px]">
       {/* Milestones - Cinematic Timeline */}
-      <section>
+      <section className="min-h-[300px]">
         <div className="text-center mb-32 space-y-6">
           <motion.div initial={{ scale: 0 }} whileInView={{ scale: 1 }} viewport={{ margin: "-20px" }} className="inline-flex items-center justify-center p-5 bg-purple-500/10 rounded-3xl mb-6 border border-purple-500/20 shadow-2xl">
             <Milestone className="w-10 h-10 text-purple-400" />
@@ -44,12 +56,12 @@ export function HighlightsSection({
         </div>
         
         <div className="relative space-y-24 before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-px before:bg-gradient-to-b before:from-transparent before:via-gray-800 before:to-transparent">
-          {milestones.map((m, i) => (
+          {milestones.length > 0 ? milestones.map((m, i) => (
             <motion.div 
               key={i} 
               initial={{ opacity: 0, y: 40 }}
               whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: false, margin: "-20px" }}
+              viewport={{ margin: "-20px" }}
               transition={{ duration: 0.8 }}
               className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group"
             >
@@ -62,15 +74,17 @@ export function HighlightsSection({
                 <p className="text-lg text-gray-400 font-medium leading-relaxed">{m.description}</p>
               </div>
             </motion.div>
-          ))}
+          )) : (
+            <div className="text-center text-gray-600 font-medium italic py-12">Tracing the timeline of us...</div>
+          )}
         </div>
-        <div ref={milestonesRef} className="flex justify-center py-24">
+        <div ref={milestonesRef} className="flex justify-center py-24 min-h-[100px]">
           {loadingMilestones && <Loader2 className="w-10 h-10 text-purple-500 animate-spin" />}
         </div>
       </section>
 
       {/* Highlights - Premium Masonry-like Grid */}
-      <section>
+      <section className="min-h-[300px]">
         <div className="text-center mb-32 space-y-6">
           <motion.div initial={{ scale: 0 }} whileInView={{ scale: 1 }} viewport={{ margin: "-20px" }} className="inline-flex items-center justify-center p-5 bg-pink-500/10 rounded-3xl mb-6 border border-pink-500/20 shadow-2xl">
             <Star className="w-10 h-10 text-pink-400" />
@@ -80,12 +94,12 @@ export function HighlightsSection({
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-          {highlights.map((h, i) => (
+          {highlights.length > 0 ? highlights.map((h, i) => (
             <motion.div 
               key={i}
               initial={{ opacity: 0, scale: 0.95 }}
               whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: false, margin: "-20px" }}
+              viewport={{ margin: "-20px" }}
               whileHover={{ y: -12, scale: 1.02 }}
               transition={{ duration: 0.6 }}
               className="bg-white/5 backdrop-blur-3xl p-16 rounded-[5rem] shadow-2xl border border-white/10 group transition-all duration-700 hover:bg-white/[0.08] hover:border-pink-500/30"
@@ -96,9 +110,11 @@ export function HighlightsSection({
               <h4 className="text-4xl font-black text-white mb-6 group-hover:text-pink-300 transition-colors tracking-tight">{h.title}</h4>
               <p className="text-xl text-gray-400 leading-relaxed font-medium">{h.description}</p>
             </motion.div>
-          ))}
+          )) : (
+            <div className="col-span-full text-center text-gray-600 font-medium italic py-12">Illuminating our brightest frames...</div>
+          )}
         </div>
-        <div ref={highlightsRef} className="flex justify-center py-24">
+        <div ref={highlightsRef} className="flex justify-center py-24 min-h-[100px]">
           {loadingHighlights && <Loader2 className="w-10 h-10 text-pink-500 animate-spin" />}
         </div>
       </section>
