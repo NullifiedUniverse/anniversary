@@ -167,7 +167,7 @@ export default function App() {
             }
           }
         } catch (e) {
-          console.log("Auto-load skipped.");
+          // Skip auto-load
         }
       };
       loadPreParsed();

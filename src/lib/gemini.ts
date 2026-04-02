@@ -1,15 +1,11 @@
 import { ChatMessage, SeedMemories } from "./parser";
 
 const logger = {
-  info: (msg: string, data?: any) => {
-    console.log(`[AI Pipeline] ℹ️ ${msg}`, data || '');
-  },
+  info: () => {},
   error: (msg: string, err?: any) => {
     console.error(`[AI Pipeline] ❌ ${msg}`, err || '');
   },
-  success: (msg: string) => {
-    console.log(`[AI Pipeline] ✅ ${msg}`);
-  }
+  success: () => {}
 };
 
 export interface MemoryData {

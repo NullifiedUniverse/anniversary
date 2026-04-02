@@ -14,30 +14,36 @@ function StatCard({ icon, title, value, tooltip, delay = 0 }: { icon: React.Reac
 
   return (
     <motion.div 
-      initial={{ opacity: 0, y: 30 }}
-      whileInView={{ opacity: 1, y: 0 }}
+      initial={{ opacity: 0, y: 30, scale: 0.95 }}
+      whileInView={{ opacity: 1, y: 0, scale: 1 }}
       viewport={{ once: false, margin: "-20px" }}
-      transition={{ delay, duration: 0.8 }}
-      className="relative bg-white/[0.03] backdrop-blur-3xl p-12 rounded-[4rem] border border-white/10 flex flex-col items-center justify-center text-center group hover:bg-white/[0.08] transition-all duration-700 shadow-2xl"
+      transition={{ delay, duration: 1, type: "spring", bounce: 0.4 }}
+      className="relative bg-white/[0.03] backdrop-blur-3xl p-10 md:p-14 rounded-[3rem] md:rounded-[4rem] border border-white/10 flex flex-col items-center justify-center text-center group hover:bg-white/[0.06] hover:border-white/20 transition-all duration-700 shadow-2xl overflow-hidden"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <div className="mb-8 p-6 bg-white/5 rounded-[2rem] group-hover:scale-110 group-hover:rotate-6 transition-all duration-700 shadow-xl border border-white/5">
+      <motion.div 
+        animate={isHovered ? { scale: 1.5, opacity: 0.1 } : { scale: 1, opacity: 0.05 }}
+        className="absolute -top-10 -right-10 w-40 h-40 bg-white rounded-full blur-3xl pointer-events-none" 
+      />
+      
+      <div className="mb-10 p-7 bg-white/5 rounded-[2.5rem] group-hover:scale-110 group-hover:rotate-6 transition-all duration-700 shadow-xl border border-white/5 relative z-10">
         {icon}
       </div>
-      <h4 className="text-[10px] text-gray-400 font-black uppercase tracking-[0.5em] mb-4">{title}</h4>
-      <p className="text-6xl font-black text-white tracking-tighter drop-shadow-lg">{value}</p>
+      <h4 className="text-[10px] text-gray-400 font-black uppercase tracking-[0.5em] mb-6 relative z-10">{title}</h4>
+      <p className="text-5xl md:text-7xl font-black text-white tracking-tighter drop-shadow-2xl relative z-10">{value}</p>
 
       <AnimatePresence>
         {isHovered && (
           <motion.div 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 10 }}
-            className="absolute -top-20 left-1/2 -translate-x-1/2 w-64 bg-white text-black text-[10px] font-black uppercase tracking-widest p-4 rounded-2xl shadow-[0_20px_50px_rgba(255,255,255,0.2)] z-20 pointer-events-none"
+            initial={{ opacity: 0, scale: 0.8, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.8, y: 10 }}
+            className="absolute inset-0 flex items-center justify-center p-8 bg-black/90 backdrop-blur-xl z-20 pointer-events-none"
           >
-            {tooltip}
-            <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 border-8 border-transparent border-t-white" />
+            <p className="text-xs font-bold text-white uppercase tracking-widest leading-relaxed">
+              {tooltip}
+            </p>
           </motion.div>
         )}
       </AnimatePresence>
