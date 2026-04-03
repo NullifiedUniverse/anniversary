@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'motion/react';
 import { Heart } from 'lucide-react';
 import { SectionParticles } from './SectionParticles';
+import { formatName } from '../../lib/utils';
 
 interface MemoriesHeaderProps {
   participants: string[];
@@ -9,15 +10,6 @@ interface MemoriesHeaderProps {
 }
 
 export function MemoriesHeader({ participants, vibe }: MemoriesHeaderProps) {
-  const formatName = (name: string) => {
-    if (!name) return "Unknown";
-    const lowerName = name.toLowerCase();
-    if (lowerName.includes('nullifiedgalaxy')) return "Null";
-    if (lowerName.includes('vanessa')) return "Yun";
-    const cleanName = name.split(/_|(?=[A-Z])/)[0];
-    return cleanName.charAt(0).toUpperCase() + cleanName.slice(1);
-  };
-
   return (
     <motion.div 
       initial="hidden" 

@@ -17,8 +17,11 @@ InstaMemories is more than just a data parser; it's a digital scrapbook designed
 
 ## 🚀 Experience the Magic
 - **📖 Narrative Synthesis**: The latest Gemini models craft a deeply romantic summary of your journey, capturing the essence of your growth together.
+- **🔄 Model Switcher**: Seamlessly toggle between Google Gemini Flash, Pro, or your local Ollama instance for the perfect balance of speed and depth.
 - **📊 Interactive Analytics**: Dive deep into your communication style with beautiful visualizations of message frequency, active hours, and response times.
 - **☁️ Sentiment Cloud**: See the words that dominate your chat history in a physics-based, responsive word cloud.
+- **✨ Cinematic Storytelling**: Experience your history with glowing "Story Line" connectors, parallax depth effects, and poetic "Chapter Transitions."
+- **🧠 Advanced Extraction**: Uncover hidden patterns with "Sentiment Bursts" detection and "Time-of-Day" narrative seeds like "The Twilight Hours."
 - **🏆 Relationship Awards**: Discover fun, AI-generated superlatives that celebrate your personality quirks.
 - **💬 Time Machine**: Instantly find your very first message and relive the excitement of where it all began.
 - **🔍 Deep Search**: A high-performance search engine built into your story, allowing you to find any memory with full surrounding context.

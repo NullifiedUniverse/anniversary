@@ -3,6 +3,7 @@ import { motion, AnimatePresence, useScroll, useSpring } from 'motion/react';
 import { MemoryData } from '../lib/gemini';
 import { ChatMessage } from '../lib/parser';
 import { Heart, BookOpen, BarChart3, Cloud, Star, Search, Sparkles } from 'lucide-react';
+import { formatName } from '../lib/utils';
 
 import { useInfiniteMemories } from './memories/useInfiniteMemories';
 import { MemoriesHeader } from './memories/MemoriesHeader';
@@ -261,7 +262,7 @@ export function Memories({ data, messages, seeds, customApiKey, selectedModel, o
             Forever<br/>Begins.
           </h2>
           <p className="text-2xl md:text-3xl text-gray-400 font-medium tracking-[0.2em] uppercase max-w-2xl mx-auto">
-            Happy Anniversary, Null & Yun.
+            Happy Anniversary, {formatName(data.participants[0])} & {formatName(data.participants[1])}.
           </p>
         </motion.div>
 

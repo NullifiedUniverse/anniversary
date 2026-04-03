@@ -81,6 +81,26 @@ graph TD
 
 ---
 
+## 🎨 Cinematic Visuals & Storytelling
+
+InstaMemories goes beyond a standard dashboard. It employs multiple layers of visual storytelling to elevate the emotional impact of your memories:
+
+*   **Glowing "Story Line"**: A responsive vertical line in the margin that traces your scroll progress, connecting each chapter into a single, cohesive narrative path.
+*   **Parallax Depth**: Particle systems and background elements react to scrolling at different speeds, creating a rich, 3D immersive feeling.
+*   **Poetic Transitions**: High-typography "Chapter Transitions" punctuate the journey, framing the different phases of the relationship with cinematic flair.
+
+---
+
+## 🧠 Advanced Intelligence Layers
+
+Our AI pipeline applies sophisticated logic to uncover the deeper "soul" of your chat logs:
+
+1.  **Sentiment Bursts**: Detects high-density clusters of emotional keywords to automatically identify the most significant "milestone" periods in your history.
+2.  **Narrative Seeds**: Categorizes extracted chat snippets into emotional themes (e.g., "The Twilight Hours", "The Laughter Echoes") to guide the AI toward more nuanced, poetic outputs.
+3.  **Model-Specific Tuning**: Dynamic prompting ensures optimal performance whether you are using high-speed Gemini Flash, deep-reasoning Gemini Pro, or privacy-focused local Ollama models.
+
+---
+
 ## 🛠️ Data Processing Pipeline
 
 We take privacy seriously. Our multi-stage pipeline ensures that only the most relevant, "cleaned" data is used for AI analysis.

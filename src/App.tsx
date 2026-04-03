@@ -322,7 +322,7 @@ export default function App() {
                     </span>
                   </h1>
                   <p className="text-2xl md:text-3xl text-gray-400 max-w-3xl mx-auto font-medium leading-relaxed italic">
-                    Transforming 370,000+ messages into your first year together.
+                    Transforming thousands of memories into your first year together.
                   </p>
                 </div>
                 
