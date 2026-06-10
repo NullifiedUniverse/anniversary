@@ -10,24 +10,19 @@
 <div id="app">
   <header class="app-header">
     <div class="logo">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-        <rect width="24" height="24" rx="6" fill="#f7931a"/>
-        <path d="M7 16l3-6 3 4 2-3 2 5" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
+      <div class="logo-icon">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+          <path d="M7 16l3-6 3 4 2-3 2 5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
       <span class="logo-text">CryptoLens</span>
     </div>
     <div class="header-actions">
-      <button id="refreshBtn" class="icon-btn" title="Refresh">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-          <polyline points="23 4 23 10 17 10"/>
-          <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
-        </svg>
+      <button id="refreshBtn" class="icon-btn" title="Refresh prices">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
       </button>
-      <button id="settingsBtn" class="icon-btn" title="Settings">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-          <circle cx="12" cy="12" r="3"/>
-          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-        </svg>
+      <button id="settingsBtn" class="icon-btn" title="Open settings">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
       </button>
     </div>
   </header>
@@ -39,24 +34,29 @@
   </nav>
 
   <main class="tab-content">
-    <!-- Watchlist -->
+    <!-- Watchlist Tab -->
     <section id="watchlist" class="tab-panel active">
       <div id="watchlistList" class="coin-list">
-        <div class="loading-state"><div class="spinner"></div></div>
+        <!-- Skeleton while loading -->
+        <div class="sk-row"><div class="skeleton sk-av"></div><div class="sk-lines"><div class="skeleton sk-name"></div><div class="skeleton sk-sub"></div></div><div class="sk-right"><div class="skeleton sk-price"></div><div class="skeleton sk-chg"></div></div></div>
+        <div class="sk-row"><div class="skeleton sk-av"></div><div class="sk-lines"><div class="skeleton sk-name"></div><div class="skeleton sk-sub"></div></div><div class="sk-right"><div class="skeleton sk-price"></div><div class="skeleton sk-chg"></div></div></div>
+        <div class="sk-row"><div class="skeleton sk-av"></div><div class="sk-lines"><div class="skeleton sk-name"></div><div class="skeleton sk-sub"></div></div><div class="sk-right"><div class="skeleton sk-price"></div><div class="skeleton sk-chg"></div></div></div>
+        <div class="sk-row"><div class="skeleton sk-av"></div><div class="sk-lines"><div class="skeleton sk-name"></div><div class="skeleton sk-sub"></div></div><div class="sk-right"><div class="skeleton sk-price"></div><div class="skeleton sk-chg"></div></div></div>
+        <div class="sk-row"><div class="skeleton sk-av"></div><div class="sk-lines"><div class="skeleton sk-name"></div><div class="skeleton sk-sub"></div></div><div class="sk-right"><div class="skeleton sk-price"></div><div class="skeleton sk-chg"></div></div></div>
       </div>
       <button id="manageWatchlistBtn" class="text-btn">+ Manage Watchlist</button>
     </section>
 
-    <!-- Portfolio -->
+    <!-- Portfolio Tab -->
     <section id="portfolio" class="tab-panel">
       <div id="portfolioSummary" class="portfolio-summary hidden">
         <div class="ps-item">
           <span class="ps-label">Total Value</span>
-          <span id="portfolioTotal" class="ps-value">—</span>
+          <span id="portfolioTotal" class="ps-value">&mdash;</span>
         </div>
         <div class="ps-item">
           <span class="ps-label">Total P&amp;L</span>
-          <span id="portfolioPnl" class="ps-value">—</span>
+          <span id="portfolioPnl" class="ps-value">&mdash;</span>
         </div>
       </div>
       <div id="portfolioList" class="coin-list"></div>
@@ -65,7 +65,7 @@
         <div class="form-group">
           <label>Coin</label>
           <div class="search-wrap">
-            <input type="text" id="holdingCoinSearch" placeholder="Search BTC, ETH…" autocomplete="off">
+            <input type="text" id="holdingCoinSearch" placeholder="Search BTC, ETH&hellip;" autocomplete="off">
             <div id="holdingSearchResults" class="search-dropdown hidden"></div>
           </div>
         </div>
@@ -81,41 +81,18 @@
         </div>
         <div class="form-actions">
           <button id="cancelHoldingBtn" class="btn-ghost">Cancel</button>
-          <button id="saveHoldingBtn" class="btn-primary">Add</button>
+          <button id="saveHoldingBtn" class="btn-primary">Add Holding</button>
         </div>
       </div>
     </section>
 
-    <!-- Market -->
-    <section id="market" class="tab-panel">
-      <div class="widget" id="fearGreedWidget">
-        <div class="widget-title">Fear &amp; Greed Index</div>
-        <div id="fgContent" class="fg-wrap"><div class="spinner"></div></div>
-      </div>
-      <div class="widget" id="gasWidget">
-        <div class="widget-title">ETH Gas <span class="widget-unit">Gwei</span></div>
-        <div class="gas-row">
-          <div class="gas-cell"><span class="gas-lbl">Slow</span><span id="gasSlow" class="gas-val">—</span></div>
-          <div class="gas-cell"><span class="gas-lbl">Standard</span><span id="gasStd" class="gas-val">—</span></div>
-          <div class="gas-cell"><span class="gas-lbl">Fast</span><span id="gasFast" class="gas-val">—</span></div>
-        </div>
-      </div>
-      <div class="widget">
-        <div class="widget-title">Global Market</div>
-        <div class="stats-list">
-          <div class="stat-row"><span class="stat-lbl">Market Cap</span><span id="gMktCap" class="stat-val">—</span></div>
-          <div class="stat-row"><span class="stat-lbl">24h Volume</span><span id="gVolume" class="stat-val">—</span></div>
-          <div class="stat-row"><span class="stat-lbl">BTC Dominance</span><span id="gBtcDom" class="stat-val">—</span></div>
-          <div class="stat-row"><span class="stat-lbl">ETH Dominance</span><span id="gEthDom" class="stat-val">—</span></div>
-          <div class="stat-row"><span class="stat-lbl">Active Coins</span><span id="gActive" class="stat-val">—</span></div>
-        </div>
-      </div>
-    </section>
+    <!-- Market Tab -->
+    <section id="market" class="tab-panel"></section>
   </main>
 
   <footer class="app-footer">
-    <span id="lastUpdated" class="footer-ts">—</span>
-    <span class="footer-credit">CoinGecko</span>
+    <span id="lastUpdated" class="footer-ts">&mdash;</span>
+    <span class="footer-credit">Powered by CoinGecko</span>
   </footer>
 </div>
 <script type="module" src="popup.js"></script>
