@@ -1,6 +1,10 @@
 import { DEFAULT_SETTINGS } from '../shared/constants.js';
 
 let settings = { ...DEFAULT_SETTINGS };
+let watchlistCoins = [];
+let watchlistSort = 'default';
+let expandedCoinId = null;
+
 const $ = id => document.getElementById(id);
 
 function msg(type, payload = {}) {
@@ -68,41 +72,129 @@ function miniSpark(prices, isUp) {
   return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 }
 
-// ── Watchlist ──────────────────────────────────────────────
+function sparkLarge(prices, isUp) {
+  if (!prices?.length) return '';
+  const W = 326, H = 52;
+  const sample = prices.filter((_, i) => i % Math.ceil(prices.length / 80) === 0);
+  if (sample.length < 2) return '';
+  const min = Math.min(...sample), max = Math.max(...sample);
+  const range = max - min || 1;
+  const pts = sample.map((p, i) => {
+    const x = (i / (sample.length - 1)) * W;
+    const y = H - ((p - min) / range) * (H - 4) - 2;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+  const color = isUp ? '#22c55e' : '#ef4444';
+  const fillPts = pts + ` ${W},${H} 0,${H}`;
+  const uid = Math.random().toString(36).slice(2, 7);
+  return `<svg width="100%" height="${H}" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+    <defs><linearGradient id="sg${uid}" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="${color}" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="${color}" stop-opacity="0"/>
+    </linearGradient></defs>
+    <polygon points="${fillPts}" fill="url(#sg${uid})"/>
+    <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>`;
+}
+
+// ── Sort ────────────────────────────────────────────────────────────
+document.querySelectorAll('.sort-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    watchlistSort = btn.dataset.sort;
+    renderWatchlist();
+  });
+});
+
+function sortCoins(coins, sort) {
+  const arr = [...coins];
+  switch (sort) {
+    case '24h_desc': return arr.sort((a, b) => (b.price_change_percentage_24h ?? -999) - (a.price_change_percentage_24h ?? -999));
+    case '24h_asc':  return arr.sort((a, b) => (a.price_change_percentage_24h ?? 999) - (b.price_change_percentage_24h ?? 999));
+    case 'name_asc': return arr.sort((a, b) => a.name.localeCompare(b.name));
+    default: return arr;
+  }
+}
+
+// ── Watchlist render ───────────────────────────────────────────────────
+function buildExpandPanel(coin) {
+  const sp = coin.sparkline_in_7d?.price || [];
+  const isUp = (coin.price_change_percentage_24h ?? 0) >= 0;
+  const sym = coin.symbol.toUpperCase();
+  const id = coin.id;
+  return `
+    <div class="expand-chart">${sparkLarge(sp, isUp)}</div>
+    <div class="expand-links">
+      <a href="https://www.binance.com/en/trade/${sym}_USDT" target="_blank" rel="noopener noreferrer" class="exch-pill">Binance ↗</a>
+      <a href="https://www.tradingview.com/chart/?symbol=BINANCE:${sym}USDT" target="_blank" rel="noopener noreferrer" class="exch-pill">TradingView ↗</a>
+      <a href="https://www.coingecko.com/en/coins/${id}" target="_blank" rel="noopener noreferrer" class="exch-pill exch-cg">CoinGecko ↗</a>
+    </div>
+  `;
+}
+
+function renderWatchlist() {
+  const coins = sortCoins(watchlistCoins, watchlistSort);
+  const sym = settings.currencySymbol || '$';
+  const listEl = $('watchlistList');
+
+  if (!coins.length) {
+    listEl.innerHTML = `<div class="empty">Watchlist is empty.<br>Add coins in Settings.</div>`;
+    return;
+  }
+
+  listEl.innerHTML = '';
+
+  coins.forEach(c => {
+    const ch = c.price_change_percentage_24h;
+    const sp = c.sparkline_in_7d?.price || [];
+    const isUp = (ch ?? 0) >= 0;
+    const isExpanded = expandedCoinId === c.id;
+
+    const rowEl = document.createElement('div');
+    rowEl.className = 'coin-row' + (isExpanded ? ' row-expanded' : '');
+    rowEl.innerHTML = `
+      ${avatar(c)}
+      <div class="coin-meta">
+        <span class="coin-name">${c.name}</span>
+        <span class="coin-sym">${c.symbol.toUpperCase()}</span>
+      </div>
+      <div class="coin-spark">${miniSpark(sp, isUp)}</div>
+      <div class="coin-price-col">
+        <span class="coin-price">${fmtPrice(c.current_price, sym)}</span>
+        ${changeBadge(ch)}
+      </div>
+      <svg class="row-chevron${isExpanded ? ' open' : ''}" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+    `;
+    rowEl.addEventListener('click', () => {
+      expandedCoinId = (expandedCoinId === c.id) ? null : c.id;
+      renderWatchlist();
+    });
+    listEl.appendChild(rowEl);
+
+    if (isExpanded) {
+      const panelEl = document.createElement('div');
+      panelEl.className = 'expand-panel';
+      panelEl.innerHTML = buildExpandPanel(c);
+      panelEl.querySelectorAll('a').forEach(a => a.addEventListener('click', e => e.stopPropagation()));
+      listEl.appendChild(panelEl);
+    }
+  });
+}
+
 async function loadWatchlist() {
   try {
     const data = await msg('GET_WATCHLIST');
-    const coins = data.coins || [];
-    const sym = data.currencySymbol || '$';
-    const el = $('watchlistList');
-    if (!coins.length) {
-      el.innerHTML = `<div class="empty">Watchlist is empty.<br>Add coins in Settings.</div>`;
-      return;
-    }
-    el.innerHTML = coins.map(c => {
-      const ch = c.price_change_percentage_24h;
-      const sp = c.sparkline_in_7d?.price || [];
-      const isUp = ch >= 0;
-      return `<div class="coin-row">
-        ${avatar(c)}
-        <div class="coin-meta">
-          <span class="coin-name">${c.name}</span>
-          <span class="coin-sym">${c.symbol.toUpperCase()}</span>
-        </div>
-        <div class="coin-spark">${miniSpark(sp, isUp)}</div>
-        <div class="coin-price-col">
-          <span class="coin-price">${fmtPrice(c.current_price, sym)}</span>
-          ${changeBadge(ch)}
-        </div>
-      </div>`;
-    }).join('');
+    watchlistCoins = data.coins || [];
+    if (data.currencySymbol) settings.currencySymbol = data.currencySymbol;
+    renderWatchlist();
     $('lastUpdated').textContent = 'Updated ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   } catch {
     $('watchlistList').innerHTML = `<div class="empty error">Failed to load prices</div>`;
   }
 }
 
-// ── Portfolio ──────────────────────────────────────────────
+// ── Portfolio ─────────────────────────────────────────────────────────
 let selectedHoldingCoin = null;
 let holdingSearchTimer;
 
@@ -188,8 +280,7 @@ $('holdingCoinSearch').addEventListener('input', e => {
 });
 
 $('addHoldingBtn').addEventListener('click', () => {
-  const form = $('addHoldingForm');
-  form.classList.toggle('hidden');
+  $('addHoldingForm').classList.toggle('hidden');
   $('holdingCurSym').textContent = settings.currencySymbol || '$';
 });
 
@@ -216,11 +307,144 @@ $('saveHoldingBtn').addEventListener('click', async () => {
   loadPortfolio();
 });
 
-// ── Market ─────────────────────────────────────────────────
+// ── Market widgets ──────────────────────────────────────────────────
+function renderConverter() {
+  const el = $('convSection');
+  if (!el) return;
+  const sym = settings.currencySymbol || '$';
+  if (!watchlistCoins.length) {
+    el.innerHTML = `<div style="padding:14px 16px;font-size:11.5px;color:var(--t-subtle)">Add coins to watchlist to use the converter.</div>`;
+    return;
+  }
+  const options = watchlistCoins.map(c =>
+    `<option value="${c.id}">${c.symbol.toUpperCase()} — ${c.name}</option>`
+  ).join('');
+  el.innerHTML = `
+    <div class="conv-inner">
+      <div class="conv-input-row">
+        <input type="number" id="convAmount" class="conv-input" placeholder="1" value="1" min="0" step="any" autocomplete="off">
+        <select id="convCoin" class="conv-select">${options}</select>
+      </div>
+      <div class="conv-output" id="convOutput"></div>
+    </div>
+  `;
+  const updateConv = () => {
+    const amount = parseFloat($('convAmount').value) || 0;
+    const coinId = $('convCoin').value;
+    const coin = watchlistCoins.find(c => c.id === coinId);
+    const out = $('convOutput');
+    if (!coin || !amount || !out) return;
+    const totalFiat = amount * coin.current_price;
+    const btc = watchlistCoins.find(c => c.id === 'bitcoin');
+    const eth = watchlistCoins.find(c => c.id === 'ethereum');
+    let lines = [`<div class="conv-row"><span class="conv-label">≈ Value</span><span class="conv-val">${fmtPrice(totalFiat, sym)}</span></div>`];
+    if (btc && coin.id !== 'bitcoin') lines.push(`<div class="conv-row"><span class="conv-label">≈ BTC</span><span class="conv-val">₿ ${(totalFiat / btc.current_price).toFixed(8)}</span></div>`);
+    if (eth && coin.id !== 'ethereum') lines.push(`<div class="conv-row"><span class="conv-label">≈ ETH</span><span class="conv-val">Ξ ${(totalFiat / eth.current_price).toFixed(6)}</span></div>`);
+    out.innerHTML = lines.join('');
+  };
+  $('convAmount').addEventListener('input', updateConv);
+  $('convCoin').addEventListener('change', updateConv);
+  updateConv();
+}
+
+function renderGasCalc(standardGwei) {
+  const el = $('gasCalcEl');
+  if (!el) return;
+  const gwei = parseFloat(standardGwei);
+  if (!gwei || isNaN(gwei)) return;
+  const ethCoin = watchlistCoins.find(c => c.id === 'ethereum');
+  const ethPrice = ethCoin?.current_price;
+  const sym = settings.currencySymbol || '$';
+  const ops = [
+    { label: 'ETH Transfer', gas: 21_000 },
+    { label: 'ERC-20 Transfer', gas: 65_000 },
+    { label: 'Uniswap Swap', gas: 150_000 },
+    { label: 'NFT Mint', gas: 100_000 },
+  ];
+  el.innerHTML = `<div class="gas-ops">${ops.map(op => {
+    const costEth = op.gas * gwei * 1e-9;
+    const display = ethPrice ? sym + (costEth * ethPrice).toFixed(2) : (costEth * 1e6).toFixed(2) + ' μETH';
+    return `<div class="gas-op"><span class="gas-op-lbl">${op.label}</span><span class="gas-op-val">${display}</span></div>`;
+  }).join('')}${!ethPrice ? '<div class="gas-op-note">Add ETH to watchlist for USD costs</div>' : ''}</div>`;
+}
+
+function renderTrending(coins) {
+  const el = $('trendEl');
+  if (!el || !coins.length) return;
+  const sym = settings.currencySymbol || '$';
+  el.innerHTML = coins.map((c, i) => {
+    const ch = c.priceChangePercent24h;
+    const chCls = (ch ?? 0) > 0 ? 'up' : (ch ?? 0) < 0 ? 'down' : 'neutral';
+    const chSign = (ch ?? 0) > 0 ? '+' : '';
+    const priceStr = (c.price && typeof c.price === 'number') ? fmtPrice(c.price, sym) : '—';
+    return `<div class="trend-row">
+      <span class="trend-rank">${i + 1}</span>
+      <div class="trend-meta">
+        <span class="trend-name">${c.name}</span>
+        <span class="trend-sym">${c.symbol}</span>
+      </div>
+      <div class="trend-right">
+        <span class="trend-price">${priceStr}</span>
+        ${ch != null ? `<span class="badge ${chCls}" style="margin-top:0">${chSign}${ch.toFixed(2)}%</span>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
 async function loadMarket() {
+  const section = $('market');
+  section.innerHTML = `
+    <div class="market-inner">
+      <div class="widget">
+        <div class="widget-title">Fear &amp; Greed Index</div>
+        <div class="fg-wrap" id="fgContent"><div class="spinner" style="margin:20px auto"></div></div>
+      </div>
+      <div class="widget">
+        <div class="widget-title">ETH Gas Tracker <span class="widget-unit">Gwei</span></div>
+        <div class="gas-row">
+          <div class="gas-cell" id="gasSlow"><span class="gas-lbl">Slow</span><span class="gas-val">—</span></div>
+          <div class="gas-cell" id="gasStd"><span class="gas-lbl">Standard</span><span class="gas-val">—</span></div>
+          <div class="gas-cell" id="gasFast"><span class="gas-lbl">Fast</span><span class="gas-val">—</span></div>
+        </div>
+        <div id="gasCalcEl"></div>
+      </div>
+      <div class="widget">
+        <div class="widget-title">Quick Converter</div>
+        <div id="convSection"></div>
+      </div>
+      <div class="widget">
+        <div class="widget-title">Trending <span class="widget-unit">Top 7 · 24h</span></div>
+        <div id="trendEl"><div class="spinner" style="margin:16px auto"></div></div>
+      </div>
+      <div class="widget">
+        <div class="widget-title">Global Market</div>
+        <div class="stats-list">
+          <div class="stat-row"><span class="stat-lbl">Market Cap</span><span id="gMktCap" class="stat-val">—</span></div>
+          <div class="stat-row"><span class="stat-lbl">24h Volume</span><span id="gVolume" class="stat-val">—</span></div>
+          <div class="stat-row"><span class="stat-lbl">BTC Dominance</span><span id="gBtcDom" class="stat-val">—</span></div>
+          <div class="stat-row"><span class="stat-lbl">ETH Dominance</span><span id="gEthDom" class="stat-val">—</span></div>
+          <div class="stat-row"><span class="stat-lbl">Active Coins</span><span id="gActive" class="stat-val">—</span></div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  if (!watchlistCoins.length) {
+    try {
+      const wl = await msg('GET_WATCHLIST');
+      watchlistCoins = wl.coins || [];
+      if (wl.currencySymbol) settings.currencySymbol = wl.currencySymbol;
+    } catch (_) {}
+  }
+  renderConverter();
+
   try {
-    const [market, gas] = await Promise.all([msg('GET_MARKET_OVERVIEW'), msg('GET_GAS')]);
-    // Fear & Greed
+    const [market, gas, trending] = await Promise.all([
+      msg('GET_MARKET_OVERVIEW'),
+      msg('GET_GAS'),
+      msg('GET_TRENDING'),
+    ]);
+
     if (market.fearGreed) {
       const { value, classification } = market.fearGreed;
       const color = value >= 60 ? '#22c55e' : value >= 40 ? '#f7931a' : '#ef4444';
@@ -235,16 +459,27 @@ async function loadMarket() {
             </svg>
             <div class="fg-num" style="color:${color}">${value}</div>
           </div>
-          <div class="fg-class" style="color:${color}">${classification}</div>
+          <div>
+            <div class="fg-class" style="color:${color}">${classification}</div>
+            <div class="fg-desc">Fear &amp; Greed</div>
+          </div>
         </div>`;
     }
-    // Gas
+
     if (gas) {
-      $('gasSlow').textContent = gas.slow;
-      $('gasStd').textContent = gas.standard;
-      $('gasFast').textContent = gas.fast;
+      $('gasSlow').querySelector('.gas-val').textContent = gas.slow;
+      $('gasStd').querySelector('.gas-val').textContent = gas.standard;
+      $('gasFast').querySelector('.gas-val').textContent = gas.fast;
+      renderGasCalc(gas.standard);
     }
-    // Global
+
+    if (trending?.coins?.length) {
+      renderTrending(trending.coins);
+    } else {
+      const tEl = $('trendEl');
+      if (tEl) tEl.innerHTML = `<div class="empty" style="padding:16px">No trending data</div>`;
+    }
+
     if (market.totalMarketCap) {
       $('gMktCap').textContent = fmtBig(market.totalMarketCap, '$');
       $('gVolume').textContent = fmtBig(market.totalVolume, '$');
@@ -255,7 +490,7 @@ async function loadMarket() {
   } catch (e) { console.warn('Market load:', e); }
 }
 
-// ── Tabs & Nav ─────────────────────────────────────────────
+// ── Tabs ───────────────────────────────────────────────────────────────
 function switchTab(name) {
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === name));
@@ -274,7 +509,6 @@ $('refreshBtn').addEventListener('click', async () => {
 $('settingsBtn').addEventListener('click', () => chrome.runtime.openOptionsPage());
 $('manageWatchlistBtn').addEventListener('click', () => chrome.runtime.openOptionsPage());
 
-// Close dropdown on outside click
 document.addEventListener('click', e => {
   if (!e.target.closest('#holdingCoinSearch') && !e.target.closest('#holdingSearchResults')) {
     $('holdingSearchResults').classList.add('hidden');

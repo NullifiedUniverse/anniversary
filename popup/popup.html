@@ -36,8 +36,15 @@
   <main class="tab-content">
     <!-- Watchlist Tab -->
     <section id="watchlist" class="tab-panel active">
+      <div class="list-controls">
+        <div class="sort-btns">
+          <button class="sort-btn active" data-sort="default">Default</button>
+          <button class="sort-btn" data-sort="24h_desc">24h ↓</button>
+          <button class="sort-btn" data-sort="24h_asc">24h ↑</button>
+          <button class="sort-btn" data-sort="name_asc">A→Z</button>
+        </div>
+      </div>
       <div id="watchlistList" class="coin-list">
-        <!-- Skeleton while loading -->
         <div class="sk-row"><div class="skeleton sk-av"></div><div class="sk-lines"><div class="skeleton sk-name"></div><div class="skeleton sk-sub"></div></div><div class="sk-right"><div class="skeleton sk-price"></div><div class="skeleton sk-chg"></div></div></div>
         <div class="sk-row"><div class="skeleton sk-av"></div><div class="sk-lines"><div class="skeleton sk-name"></div><div class="skeleton sk-sub"></div></div><div class="sk-right"><div class="skeleton sk-price"></div><div class="skeleton sk-chg"></div></div></div>
         <div class="sk-row"><div class="skeleton sk-av"></div><div class="sk-lines"><div class="skeleton sk-name"></div><div class="skeleton sk-sub"></div></div><div class="sk-right"><div class="skeleton sk-price"></div><div class="skeleton sk-chg"></div></div></div>
@@ -86,7 +93,7 @@
       </div>
     </section>
 
-    <!-- Market Tab -->
+    <!-- Market Tab (built dynamically by JS) -->
     <section id="market" class="tab-panel"></section>
   </main>
 
