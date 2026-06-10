@@ -1,4 +1,4 @@
-import { fetchMarketData, fetchCoinDetails, fetchFearGreed, fetchGasPrice, fetchGlobalData, searchCoins } from '../shared/api.js';
+import { fetchMarketData, fetchCoinDetails, fetchFearGreed, fetchGasPrice, fetchGlobalData, searchCoins, fetchTrending } from '../shared/api.js';
 import { DEFAULT_SETTINGS } from '../shared/constants.js';
 
 const CACHE_TTL = 45_000;
@@ -11,6 +11,24 @@ async function getSettings() {
   });
 }
 
+function formatBadgePrice(price) {
+  if (!price || isNaN(price)) return '';
+  if (price >= 1_000_000) return (price / 1_000_000).toFixed(1) + 'M';
+  if (price >= 1_000) return Math.round(price / 1_000) + 'K';
+  if (price >= 1) return price.toFixed(0);
+  return price.toFixed(3);
+}
+
+async function updateBadge(coins) {
+  try {
+    const btc = coins.find(c => c.id === 'bitcoin');
+    if (btc && btc.current_price) {
+      chrome.action.setBadgeText({ text: formatBadgePrice(btc.current_price) });
+      chrome.action.setBadgeBackgroundColor({ color: '#f7931a' });
+    }
+  } catch (_) {}
+}
+
 async function refreshWatchlistPrices(settings) {
   if (!settings) settings = await getSettings();
   const { watchlist = [], currency = 'usd' } = settings;
@@ -19,6 +37,7 @@ async function refreshWatchlistPrices(settings) {
     const coins = await fetchMarketData(watchlist, currency);
     const ts = Date.now();
     chrome.storage.local.set({ watchlistCache: coins, watchlistCacheTs: ts });
+    updateBadge(coins);
     if (settings.alertsEnabled && settings.alerts?.length) {
       checkAlerts(coins, settings.alerts, settings.currencySymbol || '$');
     }
@@ -60,15 +79,82 @@ function checkAlerts(coins, alerts, currSymbol) {
   }
 }
 
+// ── Context menu ─────────────────────────────────────────────────────
+const CONTEXT_COIN_IDS = {
+  BTC:'bitcoin',ETH:'ethereum',BNB:'binancecoin',XRP:'ripple',SOL:'solana',
+  ADA:'cardano',DOGE:'dogecoin',TRX:'tron',TON:'the-open-network',AVAX:'avalanche-2',
+  SHIB:'shiba-inu',LINK:'chainlink',DOT:'polkadot',BCH:'bitcoin-cash',NEAR:'near',
+  MATIC:'matic-network',LTC:'litecoin',UNI:'uniswap',APT:'aptos',XLM:'stellar',
+  ATOM:'cosmos',OP:'optimism',ARB:'arbitrum',XMR:'monero',PEPE:'pepe',
+  BITCOIN:'bitcoin',ETHEREUM:'ethereum',SOLANA:'solana',DOGECOIN:'dogecoin',
+  CARDANO:'cardano',RIPPLE:'ripple',POLKADOT:'polkadot',POLYGON:'matic-network',
+  AVALANCHE:'avalanche-2',CHAINLINK:'chainlink',UNISWAP:'uniswap',LITECOIN:'litecoin',
+  COSMOS:'cosmos',STELLAR:'stellar',MONERO:'monero',OPTIMISM:'optimism',ARBITRUM:'arbitrum',
+};
+
+function setupContextMenu() {
+  chrome.contextMenus.removeAll(() => {
+    chrome.contextMenus.create({
+      id: 'cl-check-price',
+      title: 'CryptoLens: Check price for "%s"',
+      contexts: ['selection'],
+    });
+  });
+}
+
+chrome.contextMenus.onClicked.addListener(async (info) => {
+  if (info.menuItemId !== 'cl-check-price') return;
+  const raw = (info.selectionText || '').trim().toUpperCase().replace(/[^A-Z]/g, '');
+  if (!raw) return;
+  const coinId = CONTEXT_COIN_IDS[raw];
+  if (!coinId) {
+    chrome.notifications.create(`cl-notfound-${Date.now()}`, {
+      type: 'basic',
+      iconUrl: chrome.runtime.getURL('icons/icon48.png'),
+      title: 'CryptoLens',
+      message: `"${info.selectionText.trim()}" is not a recognized crypto symbol.`,
+    });
+    return;
+  }
+  try {
+    const settings = await getSettings();
+    const data = await fetchCoinDetails(coinId);
+    const cur = settings.currency || 'usd';
+    const sym = settings.currencySymbol || '$';
+    const price = data.market_data.current_price[cur];
+    const change = data.market_data.price_change_percentage_24h_in_currency?.[cur];
+    const sign = (change ?? 0) >= 0 ? '+' : '';
+    const priceStr = price >= 1000
+      ? sym + price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+      : sym + (price?.toFixed(4) ?? '—');
+    chrome.notifications.create(`cl-price-${Date.now()}`, {
+      type: 'basic',
+      iconUrl: chrome.runtime.getURL('icons/icon48.png'),
+      title: `${data.name} (${data.symbol.toUpperCase()})`,
+      message: `Price: ${priceStr}\n24h Change: ${sign}${change?.toFixed(2) ?? '—'}%`,
+      priority: 1,
+    });
+  } catch {
+    chrome.notifications.create(`cl-err-${Date.now()}`, {
+      type: 'basic',
+      iconUrl: chrome.runtime.getURL('icons/icon48.png'),
+      title: 'CryptoLens',
+      message: 'Could not fetch price data. Please try again.',
+    });
+  }
+});
+
 chrome.runtime.onInstalled.addListener(async () => {
   const s = await getSettings();
   if (!s.watchlist) await chrome.storage.sync.set({ settings: DEFAULT_SETTINGS });
   chrome.alarms.create('price-refresh', { periodInMinutes: 1 });
+  setupContextMenu();
   refreshWatchlistPrices();
 });
 
 chrome.runtime.onStartup.addListener(() => {
   chrome.alarms.create('price-refresh', { periodInMinutes: 1 });
+  setupContextMenu();
   refreshWatchlistPrices();
 });
 
@@ -150,6 +236,25 @@ async function handleMessage(msg) {
 
     case 'GET_GAS': {
       return fetchGasPrice();
+    }
+
+    case 'GET_TRENDING': {
+      try {
+        const data = await fetchTrending();
+        return {
+          coins: (data.coins || []).slice(0, 7).map(c => ({
+            id: c.item.id,
+            symbol: c.item.symbol.toUpperCase(),
+            name: c.item.name,
+            thumb: c.item.small || c.item.thumb,
+            marketCapRank: c.item.market_cap_rank,
+            priceChangePercent24h: c.item.data?.price_change_percentage_24h?.usd,
+            price: c.item.data?.price,
+          })),
+        };
+      } catch (e) {
+        return { coins: [], error: e.message };
+      }
     }
 
     case 'SEARCH_COINS': {
