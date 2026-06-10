@@ -82,7 +82,6 @@
   let enabled = true;
   let tooltipDelay = 400;
 
-  // Read settings
   try {
     chrome.storage.sync.get({ settings: {} }, r => {
       const s = r.settings || {};
@@ -127,10 +126,10 @@
     const MARGIN = 10;
     const vpW = window.innerWidth;
     const vpH = window.innerHeight;
-    const W = 284;
+    const W = 296;
     let x = rect.left + rect.width / 2 - W / 2;
     let y = rect.bottom + MARGIN;
-    if (y + 240 > vpH) y = rect.top - MARGIN - 240;
+    if (y + 260 > vpH) y = rect.top - MARGIN - 260;
     x = Math.max(MARGIN, Math.min(x, vpW - W - MARGIN));
     el.style.left = `${x + window.scrollX}px`;
     el.style.top = `${y + window.scrollY}px`;
@@ -195,6 +194,10 @@
     const c7d = fmtChange(data.change7d);
     const c1h = fmtChange(data.change1h);
     const bg = COIN_COLORS[coinInfo.id] || '#f7931a';
+    const priceText = fmtPrice(data.price, sym);
+    const bUrl = `https://www.binance.com/en/trade/${coinInfo.symbol}_USDT`;
+    const tvUrl = `https://www.tradingview.com/chart/?symbol=BINANCE:${coinInfo.symbol}USDT`;
+    const cgUrl = `https://www.coingecko.com/en/coins/${coinInfo.id}`;
     el.innerHTML = `
       <div class="cl-hd">
         <div class="cl-av" style="background:${bg}">${coinInfo.symbol[0]}</div>
@@ -202,7 +205,7 @@
           <span class="cl-cn">${coinInfo.name}</span>
           <span class="cl-cs">${coinInfo.symbol} · #${data.marketCapRank || '—'}</span>
         </div>
-        <div class="cl-pm">${fmtPrice(data.price, sym)}</div>
+        <div class="cl-pm" title="Click to copy">${priceText}</div>
       </div>
       <div class="cl-spark-wrap">${sparklineSVG(data.sparkline)}</div>
       <div class="cl-changes">
@@ -217,12 +220,33 @@
         <div class="cl-cell"><span class="cl-cl">24h Low</span><span class="cl-cv cl-down">${fmtPrice(data.low24h, sym)}</span></div>
       </div>
       <div class="cl-ft">
-        <span>ATH: ${fmtPrice(data.ath, sym)} <span class="${fmtChange(data.athChangePercent).cls}">(${fmtChange(data.athChangePercent).text})</span></span>
-        <a class="cl-lnk" href="https://www.coingecko.com/en/coins/${coinInfo.id}" target="_blank" rel="noopener noreferrer">CoinGecko ↗</a>
+        <span class="cl-ath">ATH: ${fmtPrice(data.ath, sym)} <span class="${fmtChange(data.athChangePercent).cls}">(${fmtChange(data.athChangePercent).text})</span></span>
+        <div class="cl-exch">
+          <a class="cl-pill" href="${bUrl}" target="_blank" rel="noopener noreferrer">Binance</a>
+          <a class="cl-pill" href="${tvUrl}" target="_blank" rel="noopener noreferrer">TV</a>
+          <a class="cl-lnk" href="${cgUrl}" target="_blank" rel="noopener noreferrer">CG ↗</a>
+        </div>
       </div>
     `;
+    // Copy price on click
+    const pmEl = el.querySelector('.cl-pm');
+    if (pmEl) {
+      pmEl.addEventListener('click', e => {
+        e.stopPropagation();
+        try {
+          navigator.clipboard.writeText(priceText).then(() => {
+            pmEl.textContent = '✓ Copied!';
+            pmEl.classList.add('cl-copied');
+            setTimeout(() => {
+              pmEl.textContent = priceText;
+              pmEl.classList.remove('cl-copied');
+            }, 1500);
+          }).catch(() => {});
+        } catch (_) {}
+      });
+    }
     place(el, rect);
-    scheduleHide(7000);
+    scheduleHide(8000);
   }
 
   function showError(msg, rect) {

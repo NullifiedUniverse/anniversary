@@ -95,3 +95,7 @@ export async function fetchGasPrice() {
     return { slow: '—', standard: '—', fast: '—', unit: 'gwei' };
   }
 }
+
+export async function fetchTrending() {
+  return cgFetch('/search/trending');
+}
