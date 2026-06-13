@@ -63,6 +63,16 @@ export const COIN_MAP = {
   ARBITRUM: { id: 'arbitrum', name: 'Arbitrum', symbol: 'ARB' },
 };
 
+export const CACHE_TTL_MS = 45_000;
+
+export const ALERT_REPEAT_INTERVALS = {
+  once: 0,
+  '5m': 300_000,
+  '15m': 900_000,
+  '30m': 1_800_000,
+  '60m': 3_600_000,
+};
+
 export const DEFAULT_SETTINGS = {
   currency: 'usd',
   currencySymbol: '$',
@@ -122,4 +132,18 @@ export const COIN_COLORS = {
   tron: '#ff0013',
   algorand: '#ffffff',
   filecoin: '#0090ff',
+  'hedera-hashgraph': '#8259ef',
+  vechain: '#15bdff',
+  pepe: '#00c814',
+  'internet-computer': '#f15a24',
+  'the-graph': '#6f41d8',
+  'the-sandbox': '#00adef',
+  decentraland: '#ff2d55',
+  'axie-infinity': '#0055d5',
+  eos: '#443f54',
+  zcash: '#f4b728',
+  flow: '#00ef8b',
+  tether: '#26a17b',
+  'usd-coin': '#2775ca',
+  dai: '#f5ac37',
 };

@@ -1,14 +1,15 @@
+import { CACHE_TTL_MS } from './constants.js';
+
 const COINGECKO_BASE = 'https://api.coingecko.com/api/v3';
 const FEAR_GREED_URL = 'https://api.alternative.me/fng/';
 const ETH_RPC_URL = 'https://cloudflare-eth.com';
 
 const _cache = new Map();
-const CACHE_TTL = 30_000;
 
 function getCached(key) {
   const entry = _cache.get(key);
   if (!entry) return null;
-  if (Date.now() - entry.ts > CACHE_TTL) { _cache.delete(key); return null; }
+  if (Date.now() - entry.ts > CACHE_TTL_MS) { _cache.delete(key); return null; }
   return entry.data;
 }
 
@@ -16,10 +17,23 @@ function setCache(key, data) {
   _cache.set(key, { data, ts: Date.now() });
 }
 
+async function timedFetch(url, options, timeoutMs = 8_000) {
+  const ac = new AbortController();
+  const timer = setTimeout(() => ac.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: ac.signal });
+  } catch (err) {
+    if (err.name === 'AbortError') throw new Error('Request timed out — check connection');
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function cgFetch(path) {
   const cached = getCached(path);
   if (cached) return cached;
-  const res = await fetch(`${COINGECKO_BASE}${path}`);
+  const res = await timedFetch(`${COINGECKO_BASE}${path}`);
   if (!res.ok) throw new Error(`CoinGecko API error ${res.status}`);
   const data = await res.json();
   setCache(path, data);
@@ -56,7 +70,7 @@ export async function fetchFearGreed() {
   const key = '__fear_greed';
   const cached = getCached(key);
   if (cached) return cached;
-  const res = await fetch(`${FEAR_GREED_URL}?limit=1`);
+  const res = await timedFetch(`${FEAR_GREED_URL}?limit=1`);
   if (!res.ok) throw new Error('Fear & Greed API error');
   const data = await res.json();
   setCache(key, data);
@@ -69,12 +83,12 @@ export async function fetchGasPrice() {
   if (cached) return cached;
   try {
     const [r1, r2] = await Promise.all([
-      fetch(ETH_RPC_URL, {
+      timedFetch(ETH_RPC_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ jsonrpc: '2.0', method: 'eth_gasPrice', params: [], id: 1 }),
       }),
-      fetch(ETH_RPC_URL, {
+      timedFetch(ETH_RPC_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ jsonrpc: '2.0', method: 'eth_maxPriorityFeePerGas', params: [], id: 2 }),
