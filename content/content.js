@@ -74,7 +74,14 @@
     cosmos: '#6f7390', optimism: '#ff0420', arbitrum: '#12aaff',
     monero: '#ff6600', maker: '#1aab9b', aave: '#b6509e',
     'injective-protocol': '#00b2ff', sui: '#4da2ff', tron: '#ff0013',
+    'hedera-hashgraph': '#8259ef', vechain: '#15bdff', pepe: '#00c814',
+    'internet-computer': '#f15a24', 'the-graph': '#6f41d8',
+    tether: '#26a17b', 'usd-coin': '#2775ca', dai: '#f5ac37',
   };
+
+  // Per-page coin cache — avoids repeat API calls for the same coin within 60s
+  const _coinCache = new Map();
+  const _COIN_CACHE_TTL = 60_000;
 
   let tooltip = null;
   let hideTimer = null;
@@ -114,7 +121,8 @@
     if (!tooltip) return;
     tooltip.classList.remove('cl-visible');
     const t = tooltip;
-    setTimeout(() => { if (t.parentNode) t.parentNode.removeChild(t); if (tooltip === t) tooltip = null; }, 180);
+    tooltip = null; // clear synchronously — prevents stale-node reuse during 180ms fade
+    setTimeout(() => { if (t.parentNode) t.parentNode.removeChild(t); }, 180);
   }
 
   function scheduleHide(ms = 5000) {
@@ -228,7 +236,6 @@
         </div>
       </div>
     `;
-    // Copy price on click
     const pmEl = el.querySelector('.cl-pm');
     if (pmEl) {
       pmEl.addEventListener('click', e => {
@@ -266,7 +273,7 @@
       if (!sel || sel.isCollapsed || sel.rangeCount === 0) return;
       const raw = sel.toString().trim();
       if (!raw || raw.length > 25 || raw.length < 2) return;
-      const key = raw.toUpperCase().replace(/[^A-Z]/g, '');
+      const key = raw.toUpperCase().replace(/[^A-Z0-9]/g, '');
       if (!key) return;
       const coinInfo = COIN_MAP[key];
       if (!coinInfo) return;
@@ -275,14 +282,23 @@
       const rect = range.getBoundingClientRect();
       if (!rect.width && !rect.height) return;
 
-      showLoading(rect);
+      // Serve from cache if fresh
+      const cached = _coinCache.get(coinInfo.id);
+      if (cached && (Date.now() - cached.ts < _COIN_CACHE_TTL)) {
+        const el = getTooltip();
+        place(el, rect);
+        showData(coinInfo, cached.data, rect);
+        return;
+      }
 
+      showLoading(rect);
       try {
         chrome.runtime.sendMessage({ type: 'GET_COIN_DETAILS', payload: { coinId: coinInfo.id } }, response => {
           if (chrome.runtime.lastError || !response || response.error) {
             showError('Could not fetch price data.', rect);
             return;
           }
+          _coinCache.set(coinInfo.id, { data: response, ts: Date.now() });
           showData(coinInfo, response, rect);
         });
       } catch (_) {
