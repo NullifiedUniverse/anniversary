@@ -253,6 +253,8 @@
       });
     }
     place(el, rect);
+    // Ensure tooltip is visible — needed when serving from cache (showLoading is skipped)
+    requestAnimationFrame(() => el.classList.add('cl-visible'));
     scheduleHide(8000);
   }
 
@@ -282,11 +284,9 @@
       const rect = range.getBoundingClientRect();
       if (!rect.width && !rect.height) return;
 
-      // Serve from cache if fresh
+      // Serve from cache if fresh (skips loading spinner and API round-trip)
       const cached = _coinCache.get(coinInfo.id);
       if (cached && (Date.now() - cached.ts < _COIN_CACHE_TTL)) {
-        const el = getTooltip();
-        place(el, rect);
         showData(coinInfo, cached.data, rect);
         return;
       }
