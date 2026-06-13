@@ -1,7 +1,7 @@
-import { fetchMarketData, fetchCoinDetails, fetchFearGreed, fetchGasPrice, fetchGlobalData, searchCoins, fetchTrending } from '../shared/api.js';
-import { DEFAULT_SETTINGS } from '../shared/constants.js';
+import { fetchMarketData, fetchCoinDetails, fetchFearGreed, fetchGasPrice, fetchGlobalData, searchCoins, fetchTrending, fetchSimplePrice } from '../shared/api.js';
+import { DEFAULT_SETTINGS, COIN_MAP, CACHE_TTL_MS, ALERT_REPEAT_INTERVALS } from '../shared/constants.js';
 
-const CACHE_TTL = 45_000;
+const ALERT_COOLDOWN_ONCE = 10 * 60_000;
 
 async function getSettings() {
   return new Promise(resolve => {
@@ -47,19 +47,31 @@ async function refreshWatchlistPrices(settings) {
 }
 
 function checkAlerts(coins, alerts, currSymbol) {
-  const triggered = [];
+  const now = Date.now();
+  const toFire = [];
+  const needsMigration = alerts.some(a => a.triggered === true && !a.lastFiredAt);
+
   for (const alert of alerts) {
-    if (alert.triggered) continue;
+    const repeatMode = alert.repeatMode || 'once';
+    // Support legacy triggered:true field during migration window
+    const lastFiredAt = alert.lastFiredAt || (alert.triggered ? now : 0);
+    const cooldown = repeatMode === 'once'
+      ? ALERT_COOLDOWN_ONCE
+      : (ALERT_REPEAT_INTERVALS[repeatMode] || 0);
+
+    if (lastFiredAt && (now - lastFiredAt) < cooldown) continue;
+
     const coin = coins.find(c => c.id === alert.coinId);
     if (!coin) continue;
     const price = coin.current_price;
     if ((alert.type === 'above' && price >= alert.price) ||
         (alert.type === 'below' && price <= alert.price)) {
-      triggered.push({ ...alert, currentPrice: price });
+      toFire.push({ ...alert, currentPrice: price });
     }
   }
-  for (const alert of triggered) {
-    chrome.notifications.create(`cl-alert-${Date.now()}`, {
+
+  for (const alert of toFire) {
+    chrome.notifications.create(`cl-alert-${now}-${alert.coinId}`, {
       type: 'basic',
       iconUrl: chrome.runtime.getURL('icons/icon48.png'),
       title: `CryptoLens: ${alert.coinName || alert.coinId}`,
@@ -67,31 +79,25 @@ function checkAlerts(coins, alerts, currSymbol) {
       priority: 2,
     });
   }
-  if (triggered.length) {
+
+  if (toFire.length || needsMigration) {
     chrome.storage.sync.get({ settings: DEFAULT_SETTINGS }, r => {
-      const s = r.settings;
-      s.alerts = s.alerts.map(a =>
-        triggered.find(t => t.coinId === a.coinId && t.price === a.price)
-          ? { ...a, triggered: true } : a
-      );
+      const s = { ...DEFAULT_SETTINGS, ...r.settings };
+      s.alerts = s.alerts.map(a => {
+        const isFired = toFire.some(t => t.coinId === a.coinId && t.price === a.price);
+        const isLegacy = a.triggered === true && !a.lastFiredAt;
+        if (isFired || isLegacy) {
+          const { triggered: _t, ...rest } = a;
+          return { ...rest, repeatMode: rest.repeatMode || 'once', lastFiredAt: now };
+        }
+        return a;
+      });
       chrome.storage.sync.set({ settings: s });
     });
   }
 }
 
 // ── Context menu ─────────────────────────────────────────────────────
-const CONTEXT_COIN_IDS = {
-  BTC:'bitcoin',ETH:'ethereum',BNB:'binancecoin',XRP:'ripple',SOL:'solana',
-  ADA:'cardano',DOGE:'dogecoin',TRX:'tron',TON:'the-open-network',AVAX:'avalanche-2',
-  SHIB:'shiba-inu',LINK:'chainlink',DOT:'polkadot',BCH:'bitcoin-cash',NEAR:'near',
-  MATIC:'matic-network',LTC:'litecoin',UNI:'uniswap',APT:'aptos',XLM:'stellar',
-  ATOM:'cosmos',OP:'optimism',ARB:'arbitrum',XMR:'monero',PEPE:'pepe',
-  BITCOIN:'bitcoin',ETHEREUM:'ethereum',SOLANA:'solana',DOGECOIN:'dogecoin',
-  CARDANO:'cardano',RIPPLE:'ripple',POLKADOT:'polkadot',POLYGON:'matic-network',
-  AVALANCHE:'avalanche-2',CHAINLINK:'chainlink',UNISWAP:'uniswap',LITECOIN:'litecoin',
-  COSMOS:'cosmos',STELLAR:'stellar',MONERO:'monero',OPTIMISM:'optimism',ARBITRUM:'arbitrum',
-};
-
 function setupContextMenu() {
   chrome.contextMenus.removeAll(() => {
     chrome.contextMenus.create({
@@ -104,9 +110,9 @@ function setupContextMenu() {
 
 chrome.contextMenus.onClicked.addListener(async (info) => {
   if (info.menuItemId !== 'cl-check-price') return;
-  const raw = (info.selectionText || '').trim().toUpperCase().replace(/[^A-Z]/g, '');
+  const raw = (info.selectionText || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
   if (!raw) return;
-  const coinId = CONTEXT_COIN_IDS[raw];
+  const coinId = COIN_MAP[raw]?.id;
   if (!coinId) {
     chrome.notifications.create(`cl-notfound-${Date.now()}`, {
       type: 'basic',
@@ -203,7 +209,7 @@ async function handleMessage(msg) {
       return new Promise(resolve => {
         chrome.storage.local.get({ watchlistCache: null, watchlistCacheTs: 0 }, r => {
           const age = Date.now() - r.watchlistCacheTs;
-          if (r.watchlistCache && age < CACHE_TTL) {
+          if (r.watchlistCache && age < CACHE_TTL_MS) {
             resolve({ coins: r.watchlistCache, currency: settings.currency, currencySymbol: settings.currencySymbol });
           } else {
             refreshWatchlistPrices(settings).then(() => {
@@ -214,6 +220,17 @@ async function handleMessage(msg) {
           }
         });
       });
+    }
+
+    case 'GET_SIMPLE_PRICES': {
+      const { coinIds, currency: reqCur } = msg.payload;
+      const cur = reqCur || settings.currency;
+      const raw = await fetchSimplePrice(coinIds, cur);
+      const priceMap = {};
+      for (const [id, vals] of Object.entries(raw)) {
+        priceMap[id] = vals[cur];
+      }
+      return { priceMap, currency: settings.currency, currencySymbol: settings.currencySymbol };
     }
 
     case 'GET_MARKET_OVERVIEW': {
