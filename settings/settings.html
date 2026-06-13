@@ -106,6 +106,7 @@
               <div class="s-form-group"><label>Coin</label><div class="s-search-wrap"><input type="text" id="alertCoinSearch" class="s-input" placeholder="Search coins&hellip;" autocomplete="off"><div id="alertSearchResults" class="s-search-dropdown hidden"></div></div></div>
               <div class="s-form-group"><label>Condition</label><select id="alertType" class="s-select"><option value="above">Price goes above &uarr;</option><option value="below">Price drops below &darr;</option></select></div>
               <div class="s-form-group"><label>Target Price (<span id="alertCurSym">$</span>)</label><input type="number" id="alertPrice" class="s-input" placeholder="0.00" step="any" min="0"></div>
+              <div class="s-form-group"><label>Alert Mode</label><select id="alertRepeatMode" class="s-select"><option value="once">One-shot (then reset)</option><option value="5m">Repeat every 5 min</option><option value="15m">Repeat every 15 min</option><option value="30m">Repeat every 30 min</option><option value="60m">Repeat every hour</option></select></div>
             </div>
             <button id="saveAlertBtn" class="s-btn-primary">Add Alert</button>
           </div>
@@ -123,7 +124,7 @@
           <div class="about-logo"><svg width="60" height="60" viewBox="0 0 24 24" fill="none"><rect width="24" height="24" rx="7" fill="#f7931a"/><path d="M7 16l3-6 3 4 2-3 2 5" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
           <h3>CryptoLens <span class="version">v1.0.0</span></h3>
           <p>A quality-of-life Chrome extension for crypto traders and enthusiasts. Get real-time price data on any webpage, track your portfolio, and stay on top of the market &mdash; without leaving your current tab.</p>
-          <div class="feature-list"><div class="feature-item"><span class="fi-dot"></span>Instant price tooltip on any selected ticker</div><div class="feature-item"><span class="fi-dot"></span>Watchlist with 7-day sparklines</div><div class="feature-item"><span class="fi-dot"></span>Portfolio tracker with real-time P&amp;L</div><div class="feature-item"><span class="fi-dot"></span>Fear &amp; Greed Index</div><div class="feature-item"><span class="fi-dot"></span>ETH Gas tracker (Slow/Std/Fast)</div><div class="feature-item"><span class="fi-dot"></span>Price alerts via browser notifications</div></div>
+          <div class="feature-list"><div class="feature-item"><span class="fi-dot"></span>Instant price tooltip on any selected ticker</div><div class="feature-item"><span class="fi-dot"></span>Watchlist with 7-day sparklines</div><div class="feature-item"><span class="fi-dot"></span>Portfolio tracker with real-time P&amp;L</div><div class="feature-item"><span class="fi-dot"></span>Fear &amp; Greed Index</div><div class="feature-item"><span class="fi-dot"></span>ETH Gas tracker (Slow/Std/Fast)</div><div class="feature-item"><span class="fi-dot"></span>Price alerts with one-shot and repeat modes</div></div>
           <div class="about-footer">Data by <strong>CoinGecko</strong> (free API) &middot; Fear &amp; Greed by <strong>Alternative.me</strong> &middot; All data stored locally on your device</div>
         </div>
       </section>

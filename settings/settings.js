@@ -48,6 +48,19 @@ async function load() {
   $('alertsEnabled').checked = settings.alertsEnabled !== false;
   $('alertCurSym').textContent = settings.currencySymbol || '$';
   updateTooltipSub();
+
+  // Silently migrate legacy triggered:true alerts to use lastFiredAt
+  if (settings.alerts?.some(a => a.triggered === true && a.lastFiredAt == null)) {
+    settings.alerts = settings.alerts.map(a => {
+      if (a.triggered === true && a.lastFiredAt == null) {
+        const { triggered: _t, ...rest } = a;
+        return { ...rest, repeatMode: rest.repeatMode || 'once', lastFiredAt: Date.now() };
+      }
+      return a;
+    });
+    try { await sendMsg('SAVE_SETTINGS', settings); } catch {}
+  }
+
   renderWatchlist();
   renderPortfolio();
   renderAlerts();
@@ -217,22 +230,50 @@ function renderAlerts() {
     el.innerHTML = `<div class="s-empty">No alerts set.</div>`;
     return;
   }
-  el.innerHTML = list.map((a, i) => `
-    <div class="s-list-item ${a.triggered ? 'triggered' : ''}">
+  const sym = settings.currencySymbol || '$';
+  el.innerHTML = list.map((a, i) => {
+    const repeatMode = a.repeatMode || 'once';
+    // Support both new lastFiredAt and legacy triggered field
+    const lastFiredAt = a.lastFiredAt || (a.triggered ? Date.now() - 5 * 60_000 : 0);
+    const fired = lastFiredAt > 0;
+    const minsAgo = fired ? Math.round((Date.now() - lastFiredAt) / 60_000) : 0;
+    const firedLabel = fired ? (minsAgo < 1 ? 'just now' : `${minsAgo}m ago`) : 'never fired';
+    const repeatLabel = repeatMode === 'once' ? 'one-shot' : `repeat ${repeatMode}`;
+    const isTriggeredOnce = repeatMode === 'once' && fired;
+    return `
+    <div class="s-list-item${isTriggeredOnce ? ' triggered' : ''}">
       <div class="s-item-info">
         <span class="s-item-label">${a.coinName || a.coinId}</span>
-        <span class="s-item-sub">${a.type === 'above' ? '↑ Above' : '↓ Below'} $${(a.price || 0).toLocaleString()} ${a.triggered ? '<span class="s-tag-triggered">Triggered</span>' : ''}</span>
+        <span class="s-item-sub">
+          ${a.type === 'above' ? '↑ Above' : '↓ Below'} ${sym}${(a.price || 0).toLocaleString()}
+          &middot; <em>${repeatLabel}</em>
+          &middot; ${firedLabel}
+          ${isTriggeredOnce ? ' <span class="s-tag-triggered">Triggered</span>' : ''}
+        </span>
       </div>
+      ${isTriggeredOnce ? `<button class="s-reset-btn" data-idx="${i}" title="Re-arm this alert" style="margin-right:6px;padding:3px 8px;background:none;border:1px solid rgba(255,255,255,0.15);border-radius:5px;color:#7a90b0;font-size:11px;cursor:pointer;white-space:nowrap;flex-shrink:0;">↺ Reset</button>` : ''}
       <button class="s-remove-btn" data-idx="${i}" title="Remove">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
       </button>
     </div>
-  `).join('');
+    `;
+  }).join('');
   el.querySelectorAll('.s-remove-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       settings.alerts = (settings.alerts || []).filter((_, i) => i !== parseInt(btn.dataset.idx));
       save({ alerts: settings.alerts });
       renderAlerts();
+    });
+  });
+  el.querySelectorAll('.s-reset-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.dataset.idx);
+      if (settings.alerts[idx]) {
+        const { triggered: _t, ...rest } = settings.alerts[idx];
+        settings.alerts[idx] = { ...rest, lastFiredAt: 0 };
+        save({ alerts: settings.alerts });
+        renderAlerts();
+      }
     });
   });
 }
@@ -262,12 +303,14 @@ $('saveAlertBtn').addEventListener('click', async () => {
   if (!price || isNaN(price)) return;
   const list = [...(settings.alerts || []), {
     coinId: aSelected.id, coinSymbol: aSelected.symbol, coinName: aSelected.name,
-    type: $('alertType').value, price, triggered: false,
+    type: $('alertType').value, price,
+    repeatMode: $('alertRepeatMode').value || 'once',
+    lastFiredAt: 0,
   }];
   settings.alerts = list;
   await save({ alerts: list });
   aSelected = null;
-  $('alertCoinSearch').value = ''; $('alertPrice').value = '';
+  $('alertCoinSearch').value = ''; $('alertPrice').value = ''; $('alertRepeatMode').value = 'once';
   renderAlerts();
 });
 
