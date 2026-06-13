@@ -41,6 +41,9 @@ const COLORS = {
   'bitcoin-cash':'#8dc351',near:'#00c1de','matic-network':'#8247e5',
   litecoin:'#8c8c8c',uniswap:'#ff007a',cosmos:'#6f7390',stellar:'#7d00ff',
   optimism:'#ff0420',arbitrum:'#12aaff',monero:'#ff6600',tron:'#ff0013',
+  'hedera-hashgraph':'#8259ef',vechain:'#15bdff',pepe:'#00c814',
+  'internet-computer':'#f15a24','the-graph':'#6f41d8',
+  tether:'#26a17b','usd-coin':'#2775ca',dai:'#f5ac37',
 };
 
 function avatar(coin) {
@@ -103,6 +106,7 @@ document.querySelectorAll('.sort-btn').forEach(btn => {
     document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     watchlistSort = btn.dataset.sort;
+    chrome.storage.local.set({ watchlistSort });
     renderWatchlist();
   });
 });
@@ -117,7 +121,7 @@ function sortCoins(coins, sort) {
   }
 }
 
-// ── Watchlist render ───────────────────────────────────────────────────
+// ── Watchlist render ─────────────────────────────────────────────────────
 function buildExpandPanel(coin) {
   const sp = coin.sparkline_in_7d?.price || [];
   const isUp = (coin.price_change_percentage_24h ?? 0) >= 0;
@@ -168,6 +172,7 @@ function renderWatchlist() {
     `;
     rowEl.addEventListener('click', () => {
       expandedCoinId = (expandedCoinId === c.id) ? null : c.id;
+      chrome.storage.local.set({ expandedCoinId });
       renderWatchlist();
     });
     listEl.appendChild(rowEl);
@@ -194,7 +199,7 @@ async function loadWatchlist() {
   }
 }
 
-// ── Portfolio ─────────────────────────────────────────────────────────
+// ── Portfolio ─────────────────────────────────────────────────────
 let selectedHoldingCoin = null;
 let holdingSearchTimer;
 
@@ -206,14 +211,26 @@ async function loadPortfolio() {
     $('portfolioSummary').classList.add('hidden');
     return;
   }
+  el.innerHTML = `<div class="loading-state"><div class="spinner"></div></div>`;
   try {
     const data = await msg('GET_WATCHLIST');
     const priceMap = {};
     (data.coins || []).forEach(c => { priceMap[c.id] = c.current_price; });
-    const sym = settings.currencySymbol || '$';
+    const sym = (data.currencySymbol || settings.currencySymbol) || '$';
+    const cur = data.currency || settings.currency || 'usd';
+
+    // Fetch prices for portfolio coins not covered by watchlist
+    const missingIds = portfolio.map(h => h.coinId).filter(id => !(id in priceMap));
+    if (missingIds.length) {
+      try {
+        const extra = await msg('GET_SIMPLE_PRICES', { coinIds: missingIds, currency: cur });
+        Object.assign(priceMap, extra.priceMap || {});
+      } catch (_) {}
+    }
+
     let totalVal = 0, totalCost = 0;
     const rows = portfolio.map(h => {
-      const price = priceMap[h.coinId] || 0;
+      const price = priceMap[h.coinId] ?? 0;
       const val = h.amount * price;
       const cost = h.amount * (h.avgBuyPrice || 0);
       const pnl = val - cost;
@@ -347,14 +364,22 @@ function renderConverter() {
   updateConv();
 }
 
-function renderGasCalc(standardGwei) {
+async function renderGasCalc(standardGwei) {
   const el = $('gasCalcEl');
   if (!el) return;
   const gwei = parseFloat(standardGwei);
   if (!gwei || isNaN(gwei)) return;
   const ethCoin = watchlistCoins.find(c => c.id === 'ethereum');
-  const ethPrice = ethCoin?.current_price;
+  let ethPrice = ethCoin?.current_price;
   const sym = settings.currencySymbol || '$';
+
+  if (!ethPrice) {
+    try {
+      const res = await msg('GET_SIMPLE_PRICES', { coinIds: ['ethereum'], currency: settings.currency || 'usd' });
+      ethPrice = res.priceMap?.ethereum;
+    } catch (_) {}
+  }
+
   const ops = [
     { label: 'ETH Transfer', gas: 21_000 },
     { label: 'ERC-20 Transfer', gas: 65_000 },
@@ -365,7 +390,7 @@ function renderGasCalc(standardGwei) {
     const costEth = op.gas * gwei * 1e-9;
     const display = ethPrice ? sym + (costEth * ethPrice).toFixed(2) : (costEth * 1e6).toFixed(2) + ' μETH';
     return `<div class="gas-op"><span class="gas-op-lbl">${op.label}</span><span class="gas-op-val">${display}</span></div>`;
-  }).join('')}${!ethPrice ? '<div class="gas-op-note">Add ETH to watchlist for USD costs</div>' : ''}</div>`;
+  }).join('')}</div>`;
 }
 
 function renderTrending(coins) {
@@ -470,7 +495,7 @@ async function loadMarket() {
       $('gasSlow').querySelector('.gas-val').textContent = gas.slow;
       $('gasStd').querySelector('.gas-val').textContent = gas.standard;
       $('gasFast').querySelector('.gas-val').textContent = gas.fast;
-      renderGasCalc(gas.standard);
+      await renderGasCalc(gas.standard);
     }
 
     if (trending?.coins?.length) {
@@ -490,7 +515,7 @@ async function loadMarket() {
   } catch (e) { console.warn('Market load:', e); }
 }
 
-// ── Tabs ───────────────────────────────────────────────────────────────
+// ── Tabs ────────────────────────────────────────────────────────────────────
 function switchTab(name) {
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === name));
@@ -517,7 +542,19 @@ document.addEventListener('click', e => {
 
 async function init() {
   try { settings = await msg('GET_SETTINGS'); } catch { settings = { ...DEFAULT_SETTINGS }; }
-  loadWatchlist();
+
+  // Apply compact mode immediately
+  if (settings.compactMode) document.body.classList.add('compact');
+
+  // Restore persisted UI state, then kick off watchlist load
+  chrome.storage.local.get({ watchlistSort: 'default', expandedCoinId: null }, r => {
+    watchlistSort = r.watchlistSort || 'default';
+    expandedCoinId = r.expandedCoinId || null;
+    document.querySelectorAll('.sort-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.sort === watchlistSort);
+    });
+    loadWatchlist();
+  });
 }
 
 init();
