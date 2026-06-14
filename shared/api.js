@@ -51,7 +51,7 @@ export async function fetchSimplePrice(coinIds, currency = 'usd') {
 }
 
 export async function fetchCoinDetails(coinId) {
-  return cgFetch(`/coins/${coinId}?localization=false&tickers=false&market_data=true&community_data=false&developer_data=false`);
+  return cgFetch(`/coins/${coinId}?localization=false&tickers=false&market_data=true&community_data=false&developer_data=false&sparkline=true`);
 }
 
 export async function fetchCoinChart(coinId, days = 7, currency = 'usd') {
