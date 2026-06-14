@@ -100,7 +100,7 @@ function sparkLarge(prices, isUp) {
   </svg>`;
 }
 
-// ── Sort ────────────────────────────────────────────────────────────
+// ── Sort ──────────────────────────────────────────────────────────────────
 document.querySelectorAll('.sort-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
@@ -121,7 +121,7 @@ function sortCoins(coins, sort) {
   }
 }
 
-// ── Watchlist render ─────────────────────────────────────────────────────
+// ── Watchlist render ────────────────────────────────────────────────────────────────────────
 function buildExpandPanel(coin) {
   const sp = coin.sparkline_in_7d?.price || [];
   const isUp = (coin.price_change_percentage_24h ?? 0) >= 0;
@@ -199,7 +199,7 @@ async function loadWatchlist() {
   }
 }
 
-// ── Portfolio ─────────────────────────────────────────────────────
+// ── Portfolio ───────────────────────────────────────────────────────────────────────────
 let selectedHoldingCoin = null;
 let holdingSearchTimer;
 
@@ -280,19 +280,21 @@ $('holdingCoinSearch').addEventListener('input', e => {
   const dd = $('holdingSearchResults');
   if (q.length < 2) { dd.classList.add('hidden'); return; }
   holdingSearchTimer = setTimeout(async () => {
-    const { coins } = await msg('SEARCH_COINS', { query: q });
-    if (!coins.length) { dd.classList.add('hidden'); return; }
-    dd.innerHTML = coins.slice(0, 6).map(c =>
-      `<div class="dd-item" data-id="${c.id}" data-sym="${c.symbol}" data-name="${c.name}"><strong>${c.symbol}</strong> ${c.name}</div>`
-    ).join('');
-    dd.classList.remove('hidden');
-    dd.querySelectorAll('.dd-item').forEach(item => {
-      item.addEventListener('click', () => {
-        selectedHoldingCoin = { id: item.dataset.id, symbol: item.dataset.sym, name: item.dataset.name };
-        $('holdingCoinSearch').value = `${item.dataset.sym.toUpperCase()} — ${item.dataset.name}`;
-        dd.classList.add('hidden');
+    try {
+      const { coins } = await msg('SEARCH_COINS', { query: q });
+      if (!coins.length) { dd.classList.add('hidden'); return; }
+      dd.innerHTML = coins.slice(0, 6).map(c =>
+        `<div class="dd-item" data-id="${c.id}" data-sym="${c.symbol}" data-name="${c.name}"><strong>${c.symbol}</strong> ${c.name}</div>`
+      ).join('');
+      dd.classList.remove('hidden');
+      dd.querySelectorAll('.dd-item').forEach(item => {
+        item.addEventListener('click', () => {
+          selectedHoldingCoin = { id: item.dataset.id, symbol: item.dataset.sym, name: item.dataset.name };
+          $('holdingCoinSearch').value = `${item.dataset.sym.toUpperCase()} — ${item.dataset.name}`;
+          dd.classList.add('hidden');
+        });
       });
-    });
+    } catch (_) { dd.classList.add('hidden'); }
   }, 300);
 });
 
@@ -324,7 +326,7 @@ $('saveHoldingBtn').addEventListener('click', async () => {
   loadPortfolio();
 });
 
-// ── Market widgets ──────────────────────────────────────────────────
+// ── Market widgets ──────────────────────────────────────────────────────────────────────
 function renderConverter() {
   const el = $('convSection');
   if (!el) return;
@@ -515,7 +517,7 @@ async function loadMarket() {
   } catch (e) { console.warn('Market load:', e); }
 }
 
-// ── Tabs ────────────────────────────────────────────────────────────────────
+// ── Tabs ──────────────────────────────────────────────────────────────────────────────
 function switchTab(name) {
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === name));

@@ -72,7 +72,7 @@ function updateTooltipSub() {
 
 // General bindings
 $('currency').addEventListener('change', () => {
-  const map = { usd:'$', eur:'€', gbp:'£', jpy:'¥', aud:'A$', cad:'C$', chf:'Fr', btc:'₿', eth:'Ξ' };
+  const map = { usd:'$', eur:'€', gbp:'£', jpy:'¥', aud:'A$', cad:'C$', chf:'Fr', cny:'¥', btc:'₿', eth:'Ξ' };
   save({ currency: $('currency').value, currencySymbol: map[$('currency').value] || '$' });
 });
 $('tooltipEnabled').addEventListener('change', () => { save({ tooltipEnabled: $('tooltipEnabled').checked }); updateTooltipSub(); });
@@ -143,7 +143,7 @@ $('coinSearch').addEventListener('input', e => {
           }
         });
       });
-    } catch {}
+    } catch { el.classList.add('hidden'); }
   }, 300);
 });
 
@@ -192,16 +192,18 @@ $('pCoinSearch').addEventListener('input', e => {
   const el = $('pSearchResults');
   if (q.length < 2) { el.classList.add('hidden'); return; }
   pTimer = setTimeout(async () => {
-    const { coins } = await sendMsg('SEARCH_COINS', { query: q });
-    el.innerHTML = coins.slice(0, 6).map(c => `<div class="s-dd-item" data-id="${c.id}" data-sym="${c.symbol}" data-name="${c.name}"><strong>${c.symbol.toUpperCase()}</strong> ${c.name}</div>`).join('');
-    el.classList.toggle('hidden', !coins.length);
-    el.querySelectorAll('.s-dd-item').forEach(item => {
-      item.addEventListener('click', () => {
-        pSelected = { id: item.dataset.id, symbol: item.dataset.sym, name: item.dataset.name };
-        $('pCoinSearch').value = `${item.dataset.sym.toUpperCase()} — ${item.dataset.name}`;
-        el.classList.add('hidden');
+    try {
+      const { coins } = await sendMsg('SEARCH_COINS', { query: q });
+      el.innerHTML = coins.slice(0, 6).map(c => `<div class="s-dd-item" data-id="${c.id}" data-sym="${c.symbol}" data-name="${c.name}"><strong>${c.symbol.toUpperCase()}</strong> ${c.name}</div>`).join('');
+      el.classList.toggle('hidden', !coins.length);
+      el.querySelectorAll('.s-dd-item').forEach(item => {
+        item.addEventListener('click', () => {
+          pSelected = { id: item.dataset.id, symbol: item.dataset.sym, name: item.dataset.name };
+          $('pCoinSearch').value = `${item.dataset.sym.toUpperCase()} — ${item.dataset.name}`;
+          el.classList.add('hidden');
+        });
       });
-    });
+    } catch { el.classList.add('hidden'); }
   }, 300);
 });
 
@@ -284,16 +286,18 @@ $('alertCoinSearch').addEventListener('input', e => {
   const el = $('alertSearchResults');
   if (q.length < 2) { el.classList.add('hidden'); return; }
   aTimer = setTimeout(async () => {
-    const { coins } = await sendMsg('SEARCH_COINS', { query: q });
-    el.innerHTML = coins.slice(0, 6).map(c => `<div class="s-dd-item" data-id="${c.id}" data-sym="${c.symbol}" data-name="${c.name}"><strong>${c.symbol.toUpperCase()}</strong> ${c.name}</div>`).join('');
-    el.classList.toggle('hidden', !coins.length);
-    el.querySelectorAll('.s-dd-item').forEach(item => {
-      item.addEventListener('click', () => {
-        aSelected = { id: item.dataset.id, symbol: item.dataset.sym, name: item.dataset.name };
-        $('alertCoinSearch').value = `${item.dataset.sym.toUpperCase()} — ${item.dataset.name}`;
-        el.classList.add('hidden');
+    try {
+      const { coins } = await sendMsg('SEARCH_COINS', { query: q });
+      el.innerHTML = coins.slice(0, 6).map(c => `<div class="s-dd-item" data-id="${c.id}" data-sym="${c.symbol}" data-name="${c.name}"><strong>${c.symbol.toUpperCase()}</strong> ${c.name}</div>`).join('');
+      el.classList.toggle('hidden', !coins.length);
+      el.querySelectorAll('.s-dd-item').forEach(item => {
+        item.addEventListener('click', () => {
+          aSelected = { id: item.dataset.id, symbol: item.dataset.sym, name: item.dataset.name };
+          $('alertCoinSearch').value = `${item.dataset.sym.toUpperCase()} — ${item.dataset.name}`;
+          el.classList.add('hidden');
+        });
       });
-    });
+    } catch { el.classList.add('hidden'); }
   }, 300);
 });
 
