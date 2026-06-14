@@ -11,6 +11,13 @@ async function getSettings() {
   });
 }
 
+function createRefreshAlarm(settings) {
+  const mins = Math.max(0.5, ((settings?.refreshInterval) || 60) / 60);
+  chrome.alarms.clear('price-refresh', () => {
+    chrome.alarms.create('price-refresh', { periodInMinutes: mins });
+  });
+}
+
 function formatBadgePrice(price) {
   if (!price || isNaN(price)) return '';
   if (price >= 1_000_000) return (price / 1_000_000).toFixed(1) + 'M';
@@ -53,7 +60,6 @@ function checkAlerts(coins, alerts, currSymbol) {
 
   for (const alert of alerts) {
     const repeatMode = alert.repeatMode || 'once';
-    // Support legacy triggered:true field during migration window
     const lastFiredAt = alert.lastFiredAt || (alert.triggered ? now : 0);
     const cooldown = repeatMode === 'once'
       ? ALERT_COOLDOWN_ONCE
@@ -97,7 +103,7 @@ function checkAlerts(coins, alerts, currSymbol) {
   }
 }
 
-// ── Context menu ────────────────────────────────────────────────────────────────────
+// ── Context menu ──────────────────────────────────────────────────────────────
 function setupContextMenu() {
   chrome.contextMenus.removeAll(() => {
     chrome.contextMenus.create({
@@ -152,16 +158,16 @@ chrome.contextMenus.onClicked.addListener(async (info) => {
 
 chrome.runtime.onInstalled.addListener(async () => {
   const s = await getSettings();
-  if (!s.watchlist) await chrome.storage.sync.set({ settings: DEFAULT_SETTINGS });
-  chrome.alarms.create('price-refresh', { periodInMinutes: 1 });
+  createRefreshAlarm(s);
   setupContextMenu();
-  refreshWatchlistPrices();
+  refreshWatchlistPrices(s);
 });
 
-chrome.runtime.onStartup.addListener(() => {
-  chrome.alarms.create('price-refresh', { periodInMinutes: 1 });
+chrome.runtime.onStartup.addListener(async () => {
+  const s = await getSettings();
+  createRefreshAlarm(s);
   setupContextMenu();
-  refreshWatchlistPrices();
+  refreshWatchlistPrices(s);
 });
 
 chrome.alarms.onAlarm.addListener(alarm => {
@@ -294,11 +300,8 @@ async function handleMessage(msg) {
     case 'SAVE_SETTINGS': {
       const merged = { ...settings, ...msg.payload };
       await chrome.storage.sync.set({ settings: merged });
-      // Expire the watchlist cache so the next GET_WATCHLIST fetches fresh data
       chrome.storage.local.set({ watchlistCacheTs: 0 });
-      chrome.alarms.clear('price-refresh', () => {
-        chrome.alarms.create('price-refresh', { periodInMinutes: 1 });
-      });
+      createRefreshAlarm(merged);
       refreshWatchlistPrices(merged);
       return { success: true };
     }
