@@ -184,6 +184,17 @@ body {
   padding: 8px 14px 6px;
   background: rgba(0,0,0,0.18);
 }
+.expand-actions {
+  padding: 6px 14px 4px;
+}
+.copy-price-btn {
+  background: var(--bg-raised); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); color: var(--t-muted);
+  font-size: 11.5px; font-weight: 700; padding: 4px 10px;
+  font-variant-numeric: tabular-nums;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+.copy-price-btn:hover { background: rgba(247,147,26,0.1); border-color: var(--acc-border); color: var(--acc); }
 .expand-links {
   display: flex;
   gap: 7px;
@@ -429,6 +440,17 @@ body {
 .trend-sym { display: block; font-size: 10px; color: var(--t-subtle); margin-top: 1px; }
 .trend-right { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; flex-shrink: 0; }
 .trend-price { font-size: 12px; font-weight: 700; color: var(--t-primary); font-variant-numeric: tabular-nums; }
+
+/* Trending watch button */
+.trend-watch {
+  background: none; border: 1px solid var(--border); border-radius: 5px;
+  color: var(--t-subtle); width: 22px; height: 22px;
+  font-size: 14px; font-weight: 700; line-height: 1; padding: 0;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  transition: color 0.12s, background 0.12s, border-color 0.12s;
+}
+.trend-watch:hover:not(.in-wl) { color: var(--acc); border-color: var(--acc-border); background: rgba(247,147,26,0.1); }
+.trend-watch.in-wl { color: var(--green); border-color: rgba(0,210,106,0.25); cursor: default; }
 
 /* Global stats */
 .stats-list { padding: 2px 0; }

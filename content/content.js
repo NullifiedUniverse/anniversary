@@ -292,10 +292,13 @@
       </div>
       <div class="cl-ft">
         <span class="cl-ath">ATH: ${fmtPrice(data.ath, sym)} <span class="${fmtChange(data.athChangePercent).cls}">(${fmtChange(data.athChangePercent).text})</span></span>
-        <div class="cl-exch">
-          ${!isStable ? `<a class="cl-pill" href="${bUrl}" target="_blank" rel="noopener noreferrer">Binance</a>
-          <a class="cl-pill" href="${tvUrl}" target="_blank" rel="noopener noreferrer">TV</a>` : ''}
-          <a class="cl-pill cl-pill-cg" href="${cgUrl}" target="_blank" rel="noopener noreferrer">CG ↗</a>
+        <div class="cl-ft-right">
+          <div class="cl-exch">
+            ${!isStable ? `<a class="cl-pill" href="${bUrl}" target="_blank" rel="noopener noreferrer">Binance</a>
+            <a class="cl-pill" href="${tvUrl}" target="_blank" rel="noopener noreferrer">TV</a>` : ''}
+            <a class="cl-pill cl-pill-cg" href="${cgUrl}" target="_blank" rel="noopener noreferrer">CG ↗</a>
+          </div>
+          <button class="cl-watch-btn" id="cl-watch-btn">+ Watch</button>
         </div>
       </div>
     `;
@@ -312,6 +315,29 @@
               pmEl.classList.remove('cl-copied');
             }, 1500);
           }).catch(() => {});
+        } catch (_) {}
+      });
+    }
+    const watchBtn = el.querySelector('#cl-watch-btn');
+    if (watchBtn) {
+      try {
+        chrome.storage.sync.get({ settings: {} }, r => {
+          const wl = (r.settings || {}).watchlist || [];
+          if (wl.includes(coinInfo.id)) {
+            watchBtn.textContent = '✓ Watching';
+            watchBtn.classList.add('cl-watch-active');
+          }
+        });
+      } catch (_) {}
+      watchBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        if (watchBtn.classList.contains('cl-watch-active')) return;
+        try {
+          chrome.runtime.sendMessage({ type: 'ADD_TO_WATCHLIST', payload: { coinId: coinInfo.id } }, r => {
+            if (chrome.runtime.lastError || !r) return;
+            watchBtn.textContent = '✓ Watching';
+            watchBtn.classList.add('cl-watch-active');
+          });
         } catch (_) {}
       });
     }

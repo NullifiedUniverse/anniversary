@@ -119,12 +119,16 @@ function buildExpandPanel(coin) {
   const sym = coin.symbol.toUpperCase();
   const id = coin.id;
   const isStable = STABLECOINS.has(id);
+  const priceStr = fmtPrice(coin.current_price, settings.currencySymbol || '$');
   const exchangeLinks = isStable ? '' : `
     <a href="https://www.binance.com/en/trade/${sym}_USDT" target="_blank" rel="noopener noreferrer" class="exch-pill">Binance ↗</a>
     <a href="https://www.tradingview.com/chart/?symbol=BINANCE:${sym}USDT" target="_blank" rel="noopener noreferrer" class="exch-pill">TradingView ↗</a>
   `;
   return `
     <div class="expand-chart">${sparkLarge(sp, isUp)}</div>
+    <div class="expand-actions">
+      <button class="copy-price-btn" data-price="${priceStr}">Copy price · ${priceStr}</button>
+    </div>
     <div class="expand-links">
       ${exchangeLinks}
       <a href="https://www.coingecko.com/en/coins/${id}" target="_blank" rel="noopener noreferrer" class="exch-pill exch-cg">CoinGecko ↗</a>
@@ -177,6 +181,18 @@ function renderWatchlist() {
       panelEl.className = 'expand-panel';
       panelEl.innerHTML = buildExpandPanel(c);
       panelEl.querySelectorAll('a').forEach(a => a.addEventListener('click', e => e.stopPropagation()));
+      const copyBtn = panelEl.querySelector('.copy-price-btn');
+      if (copyBtn) {
+        copyBtn.addEventListener('click', e => {
+          e.stopPropagation();
+          const price = copyBtn.dataset.price;
+          navigator.clipboard.writeText(price).then(() => {
+            const orig = copyBtn.textContent;
+            copyBtn.textContent = '✓ Copied!';
+            setTimeout(() => { copyBtn.textContent = orig; }, 1500);
+          }).catch(() => {});
+        });
+      }
       listEl.appendChild(panelEl);
     }
   });
@@ -393,11 +409,13 @@ function renderTrending(coins) {
   const el = $('trendEl');
   if (!el || !coins.length) return;
   const sym = settings.currencySymbol || '$';
+  const watchlistIds = new Set(watchlistCoins.map(c => c.id));
   el.innerHTML = coins.map((c, i) => {
     const ch = c.priceChangePercent24h;
     const chCls = (ch ?? 0) > 0 ? 'up' : (ch ?? 0) < 0 ? 'down' : 'neutral';
     const chSign = (ch ?? 0) > 0 ? '+' : '';
     const priceStr = (c.price && typeof c.price === 'number') ? fmtPrice(c.price, sym) : '—';
+    const inWl = watchlistIds.has(c.id);
     return `<div class="trend-row">
       <span class="trend-rank">${i + 1}</span>
       <div class="trend-meta">
@@ -408,8 +426,26 @@ function renderTrending(coins) {
         <span class="trend-price">${priceStr}</span>
         ${ch != null ? `<span class="badge ${chCls}" style="margin-top:0">${chSign}${ch.toFixed(2)}%</span>` : ''}
       </div>
+      <button class="trend-watch${inWl ? ' in-wl' : ''}" data-id="${c.id}" title="${inWl ? 'In watchlist' : 'Add to watchlist'}">${inWl ? '✓' : '+'}</button>
     </div>`;
   }).join('');
+
+  el.querySelectorAll('.trend-watch:not(.in-wl)').forEach(btn => {
+    btn.addEventListener('click', async e => {
+      e.stopPropagation();
+      const coinId = btn.dataset.id;
+      try {
+        const r = await msg('ADD_TO_WATCHLIST', { coinId });
+        btn.classList.add('in-wl');
+        btn.textContent = '✓';
+        btn.title = 'In watchlist';
+        if (!r.alreadyIn) {
+          watchlistCoins = [];
+          loadWatchlist();
+        }
+      } catch (_) {}
+    });
+  });
 }
 
 async function loadMarket() {
