@@ -97,7 +97,7 @@ function checkAlerts(coins, alerts, currSymbol) {
   }
 }
 
-// ── Context menu ─────────────────────────────────────────────────────
+// ── Context menu ────────────────────────────────────────────────────────────────────
 function setupContextMenu() {
   chrome.contextMenus.removeAll(() => {
     chrome.contextMenus.create({
@@ -294,6 +294,8 @@ async function handleMessage(msg) {
     case 'SAVE_SETTINGS': {
       const merged = { ...settings, ...msg.payload };
       await chrome.storage.sync.set({ settings: merged });
+      // Expire the watchlist cache so the next GET_WATCHLIST fetches fresh data
+      chrome.storage.local.set({ watchlistCacheTs: 0 });
       chrome.alarms.clear('price-refresh', () => {
         chrome.alarms.create('price-refresh', { periodInMinutes: 1 });
       });
