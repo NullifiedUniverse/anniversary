@@ -1,4 +1,12 @@
-import { DEFAULT_SETTINGS } from '../shared/constants.js';
+import { DEFAULT_SETTINGS, COIN_MAP } from '../shared/constants.js';
+
+const _idNameMap = {};
+for (const entry of Object.values(COIN_MAP)) {
+  if (entry && entry.id && entry.name && !_idNameMap[entry.id]) _idNameMap[entry.id] = entry.name;
+}
+function coinDisplayName(id) {
+  return _idNameMap[id] || id.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
 
 let settings = { ...DEFAULT_SETTINGS };
 const $ = id => document.getElementById(id);
@@ -95,8 +103,8 @@ function renderWatchlist() {
   }
   el.innerHTML = list.map((id) => `
     <div class="s-list-item" data-id="${id}">
-      <span class="s-drag-handle">☰</span>
-      <span class="s-item-label">${id.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</span>
+      <span class="s-drag-handle">&#9776;</span>
+      <span class="s-item-label">${coinDisplayName(id)}</span>
       <button class="s-remove-btn" data-id="${id}" title="Remove">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
       </button>
@@ -166,8 +174,8 @@ function renderPortfolio() {
   el.innerHTML = list.map((h, i) => `
     <div class="s-list-item">
       <div class="s-item-info">
-        <span class="s-item-label">${h.coinName || h.coinId}</span>
-        <span class="s-item-sub">${h.amount} ${(h.coinSymbol || '').toUpperCase()} · avg $${(h.avgBuyPrice || 0).toLocaleString()}</span>
+        <span class="s-item-label">${h.coinName || coinDisplayName(h.coinId)}</span>
+        <span class="s-item-sub">${h.amount} ${(h.coinSymbol || '').toUpperCase()} &middot; avg $${(h.avgBuyPrice || 0).toLocaleString()}</span>
       </div>
       <button class="s-remove-btn" data-idx="${i}" title="Remove">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
@@ -235,7 +243,6 @@ function renderAlerts() {
   const sym = settings.currencySymbol || '$';
   el.innerHTML = list.map((a, i) => {
     const repeatMode = a.repeatMode || 'once';
-    // Support both new lastFiredAt and legacy triggered field
     const lastFiredAt = a.lastFiredAt || (a.triggered ? Date.now() - 5 * 60_000 : 0);
     const fired = lastFiredAt > 0;
     const minsAgo = fired ? Math.round((Date.now() - lastFiredAt) / 60_000) : 0;
@@ -245,7 +252,7 @@ function renderAlerts() {
     return `
     <div class="s-list-item${isTriggeredOnce ? ' triggered' : ''}">
       <div class="s-item-info">
-        <span class="s-item-label">${a.coinName || a.coinId}</span>
+        <span class="s-item-label">${a.coinName || coinDisplayName(a.coinId)}</span>
         <span class="s-item-sub">
           ${a.type === 'above' ? '↑ Above' : '↓ Below'} ${sym}${(a.price || 0).toLocaleString()}
           &middot; <em>${repeatLabel}</em>
@@ -253,7 +260,7 @@ function renderAlerts() {
           ${isTriggeredOnce ? ' <span class="s-tag-triggered">Triggered</span>' : ''}
         </span>
       </div>
-      ${isTriggeredOnce ? `<button class="s-reset-btn" data-idx="${i}" title="Re-arm this alert" style="margin-right:6px;padding:3px 8px;background:none;border:1px solid rgba(255,255,255,0.15);border-radius:5px;color:#7a90b0;font-size:11px;cursor:pointer;white-space:nowrap;flex-shrink:0;">↺ Reset</button>` : ''}
+      ${isTriggeredOnce ? `<button class="s-reset-btn" data-idx="${i}" title="Re-arm this alert">↺ Reset</button>` : ''}
       <button class="s-remove-btn" data-idx="${i}" title="Remove">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
       </button>
