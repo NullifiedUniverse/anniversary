@@ -1,9 +1,12 @@
-import { DEFAULT_SETTINGS } from '../shared/constants.js';
+import { DEFAULT_SETTINGS, COIN_COLORS } from '../shared/constants.js';
+
+const STABLECOINS = new Set(['tether', 'usd-coin', 'dai', 'binance-usd']);
 
 let settings = { ...DEFAULT_SETTINGS };
 let watchlistCoins = [];
 let watchlistSort = 'default';
 let expandedCoinId = null;
+let marketLoadedAt = 0;
 
 const $ = id => document.getElementById(id);
 
@@ -34,20 +37,8 @@ function fmtBig(n, sym) {
   return sym + n.toLocaleString();
 }
 
-const COLORS = {
-  bitcoin:'#f7931a',ethereum:'#627eea',solana:'#9945ff',binancecoin:'#f3ba2f',
-  ripple:'#346aa9',cardano:'#0033ad',dogecoin:'#c2a633','the-open-network':'#0088cc',
-  'avalanche-2':'#e84142',chainlink:'#2a5ada',polkadot:'#e6007a',
-  'bitcoin-cash':'#8dc351',near:'#00c1de','matic-network':'#8247e5',
-  litecoin:'#8c8c8c',uniswap:'#ff007a',cosmos:'#6f7390',stellar:'#7d00ff',
-  optimism:'#ff0420',arbitrum:'#12aaff',monero:'#ff6600',tron:'#ff0013',
-  'hedera-hashgraph':'#8259ef',vechain:'#15bdff',pepe:'#00c814',
-  'internet-computer':'#f15a24','the-graph':'#6f41d8',
-  tether:'#26a17b','usd-coin':'#2775ca',dai:'#f5ac37',
-};
-
 function avatar(coin) {
-  const bg = COLORS[coin.id] || '#475569';
+  const bg = COIN_COLORS[coin.id] || '#475569';
   const letter = (coin.symbol || coin.name || '?')[0].toUpperCase();
   return `<div class="coin-av" style="background:${bg}">${letter}</div>`;
 }
@@ -100,7 +91,7 @@ function sparkLarge(prices, isUp) {
   </svg>`;
 }
 
-// ── Sort ──────────────────────────────────────────────────────────────────
+// ── Sort ──────────────────────────────────────────────────────────────────────
 document.querySelectorAll('.sort-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
@@ -121,17 +112,21 @@ function sortCoins(coins, sort) {
   }
 }
 
-// ── Watchlist render ────────────────────────────────────────────────────────────────────────
+// ── Watchlist render ──────────────────────────────────────────────────────────
 function buildExpandPanel(coin) {
   const sp = coin.sparkline_in_7d?.price || [];
   const isUp = (coin.price_change_percentage_24h ?? 0) >= 0;
   const sym = coin.symbol.toUpperCase();
   const id = coin.id;
+  const isStable = STABLECOINS.has(id);
+  const exchangeLinks = isStable ? '' : `
+    <a href="https://www.binance.com/en/trade/${sym}_USDT" target="_blank" rel="noopener noreferrer" class="exch-pill">Binance ↗</a>
+    <a href="https://www.tradingview.com/chart/?symbol=BINANCE:${sym}USDT" target="_blank" rel="noopener noreferrer" class="exch-pill">TradingView ↗</a>
+  `;
   return `
     <div class="expand-chart">${sparkLarge(sp, isUp)}</div>
     <div class="expand-links">
-      <a href="https://www.binance.com/en/trade/${sym}_USDT" target="_blank" rel="noopener noreferrer" class="exch-pill">Binance ↗</a>
-      <a href="https://www.tradingview.com/chart/?symbol=BINANCE:${sym}USDT" target="_blank" rel="noopener noreferrer" class="exch-pill">TradingView ↗</a>
+      ${exchangeLinks}
       <a href="https://www.coingecko.com/en/coins/${id}" target="_blank" rel="noopener noreferrer" class="exch-pill exch-cg">CoinGecko ↗</a>
     </div>
   `;
@@ -199,7 +194,7 @@ async function loadWatchlist() {
   }
 }
 
-// ── Portfolio ───────────────────────────────────────────────────────────────────────────
+// ── Portfolio ─────────────────────────────────────────────────────────────────
 let selectedHoldingCoin = null;
 let holdingSearchTimer;
 
@@ -219,7 +214,6 @@ async function loadPortfolio() {
     const sym = (data.currencySymbol || settings.currencySymbol) || '$';
     const cur = data.currency || settings.currency || 'usd';
 
-    // Fetch prices for portfolio coins not covered by watchlist
     const missingIds = portfolio.map(h => h.coinId).filter(id => !(id in priceMap));
     if (missingIds.length) {
       try {
@@ -326,7 +320,7 @@ $('saveHoldingBtn').addEventListener('click', async () => {
   loadPortfolio();
 });
 
-// ── Market widgets ──────────────────────────────────────────────────────────────────────
+// ── Market widgets ────────────────────────────────────────────────────────────
 function renderConverter() {
   const el = $('convSection');
   if (!el) return;
@@ -420,6 +414,9 @@ function renderTrending(coins) {
 
 async function loadMarket() {
   const section = $('market');
+  // Skip full rebuild if market data was loaded within the last 2 minutes
+  if (section.innerHTML && Date.now() - marketLoadedAt < 120_000) return;
+
   section.innerHTML = `
     <div class="market-inner">
       <div class="widget">
@@ -514,10 +511,12 @@ async function loadMarket() {
       $('gEthDom').textContent = market.ethDominance?.toFixed(1) + '%';
       $('gActive').textContent = market.activeCryptocurrencies?.toLocaleString();
     }
+
+    marketLoadedAt = Date.now();
   } catch (e) { console.warn('Market load:', e); }
 }
 
-// ── Tabs ──────────────────────────────────────────────────────────────────────────────
+// ── Tabs ──────────────────────────────────────────────────────────────────────
 function switchTab(name) {
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === name));
@@ -529,6 +528,7 @@ document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () =>
 
 $('refreshBtn').addEventListener('click', async () => {
   $('refreshBtn').classList.add('spinning');
+  marketLoadedAt = 0;
   try { await msg('FORCE_REFRESH'); await loadWatchlist(); } catch {}
   $('refreshBtn').classList.remove('spinning');
 });
@@ -545,10 +545,8 @@ document.addEventListener('click', e => {
 async function init() {
   try { settings = await msg('GET_SETTINGS'); } catch { settings = { ...DEFAULT_SETTINGS }; }
 
-  // Apply compact mode immediately
   if (settings.compactMode) document.body.classList.add('compact');
 
-  // Restore persisted UI state, then kick off watchlist load
   chrome.storage.local.get({ watchlistSort: 'default', expandedCoinId: null }, r => {
     watchlistSort = r.watchlistSort || 'default';
     expandedCoinId = r.expandedCoinId || null;
