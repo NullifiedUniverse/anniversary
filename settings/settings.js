@@ -57,7 +57,6 @@ async function load() {
   $('alertCurSym').textContent = settings.currencySymbol || '$';
   updateTooltipSub();
 
-  // Silently migrate legacy triggered:true alerts to use lastFiredAt
   if (settings.alerts?.some(a => a.triggered === true && a.lastFiredAt == null)) {
     settings.alerts = settings.alerts.map(a => {
       if (a.triggered === true && a.lastFiredAt == null) {
@@ -101,8 +100,8 @@ function renderWatchlist() {
     el.innerHTML = `<div class="s-empty">Your watchlist is empty. Search above to add coins.</div>`;
     return;
   }
-  el.innerHTML = list.map((id) => `
-    <div class="s-list-item" data-id="${id}">
+  el.innerHTML = list.map((id, idx) => `
+    <div class="s-list-item" data-id="${id}" data-idx="${idx}" draggable="true">
       <span class="s-drag-handle">&#9776;</span>
       <span class="s-item-label">${coinDisplayName(id)}</span>
       <button class="s-remove-btn" data-id="${id}" title="Remove">
@@ -110,6 +109,41 @@ function renderWatchlist() {
       </button>
     </div>
   `).join('');
+
+  let dragSrcIdx = null;
+
+  el.querySelectorAll('.s-list-item').forEach(item => {
+    item.addEventListener('dragstart', e => {
+      dragSrcIdx = parseInt(item.dataset.idx);
+      item.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    item.addEventListener('dragend', () => {
+      item.classList.remove('dragging');
+      el.querySelectorAll('.s-list-item').forEach(i => i.classList.remove('drag-over'));
+    });
+    item.addEventListener('dragover', e => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      el.querySelectorAll('.s-list-item').forEach(i => i.classList.remove('drag-over'));
+      if (parseInt(item.dataset.idx) !== dragSrcIdx) item.classList.add('drag-over');
+    });
+    item.addEventListener('dragleave', () => item.classList.remove('drag-over'));
+    item.addEventListener('drop', e => {
+      e.preventDefault();
+      item.classList.remove('drag-over');
+      const dstIdx = parseInt(item.dataset.idx);
+      if (dragSrcIdx === null || dragSrcIdx === dstIdx) return;
+      const newList = [...(settings.watchlist || [])];
+      const [moved] = newList.splice(dragSrcIdx, 1);
+      newList.splice(dstIdx, 0, moved);
+      settings.watchlist = newList;
+      save({ watchlist: newList });
+      dragSrcIdx = null;
+      renderWatchlist();
+    });
+  });
+
   el.querySelectorAll('.s-remove-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       settings.watchlist = (settings.watchlist || []).filter(id => id !== btn.dataset.id);
@@ -171,11 +205,12 @@ function renderPortfolio() {
     el.innerHTML = `<div class="s-empty">No holdings yet. Click below to add your first position.</div>`;
     return;
   }
+  const sym = settings.currencySymbol || '$';
   el.innerHTML = list.map((h, i) => `
     <div class="s-list-item">
       <div class="s-item-info">
         <span class="s-item-label">${h.coinName || coinDisplayName(h.coinId)}</span>
-        <span class="s-item-sub">${h.amount} ${(h.coinSymbol || '').toUpperCase()} &middot; avg $${(h.avgBuyPrice || 0).toLocaleString()}</span>
+        <span class="s-item-sub">${h.amount} ${(h.coinSymbol || '').toUpperCase()} &middot; avg ${sym}${(h.avgBuyPrice || 0).toLocaleString()}</span>
       </div>
       <button class="s-remove-btn" data-idx="${i}" title="Remove">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
@@ -312,9 +347,20 @@ $('saveAlertBtn').addEventListener('click', async () => {
   if (!aSelected) return;
   const price = parseFloat($('alertPrice').value);
   if (!price || isNaN(price)) return;
+  const type = $('alertType').value;
+  const isDupe = (settings.alerts || []).some(
+    a => a.coinId === aSelected.id && a.type === type && Math.abs(a.price - price) < 0.0001
+  );
+  if (isDupe) {
+    const btn = $('saveAlertBtn');
+    const orig = btn.textContent;
+    btn.textContent = 'Already exists!';
+    setTimeout(() => { btn.textContent = orig; }, 2000);
+    return;
+  }
   const list = [...(settings.alerts || []), {
     coinId: aSelected.id, coinSymbol: aSelected.symbol, coinName: aSelected.name,
-    type: $('alertType').value, price,
+    type, price,
     repeatMode: $('alertRepeatMode').value || 'once',
     lastFiredAt: 0,
   }];

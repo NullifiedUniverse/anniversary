@@ -398,6 +398,12 @@ svg { display: block; flex-shrink: 0; }
   background: rgba(247,147,26,0.03);
   border-left: 2px solid rgba(247,147,26,0.25);
 }
+.s-list-item[draggable="true"] { cursor: grab; }
+.s-list-item.dragging { opacity: 0.3; cursor: grabbing; }
+.s-list-item.drag-over {
+  border-top: 2px solid var(--acc-border);
+  background: rgba(247,147,26,0.04);
+}
 
 .s-drag-handle {
   color: var(--t-subtle);

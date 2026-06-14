@@ -77,7 +77,7 @@ function checkAlerts(coins, alerts, currSymbol) {
   }
 
   for (const alert of toFire) {
-    chrome.notifications.create(`cl-alert-${now}-${alert.coinId}`, {
+    chrome.notifications.create(`cl-alert-${Date.now()}-${alert.coinId}`, {
       type: 'basic',
       iconUrl: chrome.runtime.getURL('icons/icon48.png'),
       title: `CryptoLens: ${alert.coinName || alert.coinId}`,
@@ -94,7 +94,7 @@ function checkAlerts(coins, alerts, currSymbol) {
         const isLegacy = a.triggered === true && !a.lastFiredAt;
         if (isFired || isLegacy) {
           const { triggered: _t, ...rest } = a;
-          return { ...rest, repeatMode: rest.repeatMode || 'once', lastFiredAt: now };
+          return { ...rest, repeatMode: rest.repeatMode || 'once', lastFiredAt: Date.now() };
         }
         return a;
       });
@@ -310,6 +310,19 @@ async function handleMessage(msg) {
       chrome.storage.local.set({ watchlistCacheTs: 0 });
       await refreshWatchlistPrices(settings);
       return { success: true };
+    }
+
+    case 'ADD_TO_WATCHLIST': {
+      const { coinId } = msg.payload;
+      if (!coinId) return { success: false };
+      const alreadyIn = settings.watchlist.includes(coinId);
+      if (!alreadyIn && settings.watchlist.length < 20) {
+        const updated = { ...settings, watchlist: [...settings.watchlist, coinId] };
+        await chrome.storage.sync.set({ settings: updated });
+        chrome.storage.local.set({ watchlistCacheTs: 0 });
+        refreshWatchlistPrices(updated);
+      }
+      return { success: true, alreadyIn };
     }
 
     default:
