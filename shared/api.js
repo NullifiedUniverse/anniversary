@@ -30,14 +30,26 @@ async function timedFetch(url, options, timeoutMs = 8_000) {
   }
 }
 
+const _inflight = new Map();
+
 async function cgFetch(path) {
   const cached = getCached(path);
   if (cached) return cached;
-  const res = await timedFetch(`${COINGECKO_BASE}${path}`);
-  if (!res.ok) throw new Error(`CoinGecko API error ${res.status}`);
-  const data = await res.json();
-  setCache(path, data);
-  return data;
+  if (_inflight.has(path)) return _inflight.get(path);
+  const req = (async () => {
+    try {
+      const res = await timedFetch(`${COINGECKO_BASE}${path}`);
+      if (res.status === 429) throw new Error('Rate limited by CoinGecko — try again in a minute');
+      if (!res.ok) throw new Error(`CoinGecko API error ${res.status}`);
+      const data = await res.json();
+      setCache(path, data);
+      return data;
+    } finally {
+      _inflight.delete(path);
+    }
+  })();
+  _inflight.set(path, req);
+  return req;
 }
 
 export async function fetchMarketData(coinIds, currency = 'usd') {

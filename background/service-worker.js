@@ -28,25 +28,46 @@ function formatBadgePrice(price) {
 
 async function updateBadge(coins) {
   try {
-    const btc = coins.find(c => c.id === 'bitcoin');
-    if (btc && btc.current_price) {
-      chrome.action.setBadgeText({ text: formatBadgePrice(btc.current_price) });
+    const lead = coins.find(c => c.id === 'bitcoin') || coins[0];
+    if (lead && lead.current_price) {
+      chrome.action.setBadgeText({ text: formatBadgePrice(lead.current_price) });
       chrome.action.setBadgeBackgroundColor({ color: '#f7931a' });
+    } else {
+      chrome.action.setBadgeText({ text: '' });
     }
   } catch (_) {}
 }
 
+function fmtNotifPrice(p) {
+  if (p === null || p === undefined || isNaN(p)) return '—';
+  if (p >= 1000) return p.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  if (p >= 1) return p.toFixed(2);
+  if (p >= 0.001) return p.toFixed(4);
+  return p.toFixed(8);
+}
+
 async function refreshWatchlistPrices(settings) {
   if (!settings) settings = await getSettings();
-  const { watchlist = [], currency = 'usd' } = settings;
-  if (!watchlist.length) return;
+  const { watchlist = [], currency = 'usd', alerts = [] } = settings;
+  // Include alert coins so alerts fire even for coins not on the watchlist
+  const alertIds = settings.alertsEnabled ? alerts.map(a => a.coinId) : [];
+  const fetchIds = [...new Set([...watchlist, ...alertIds])];
+  if (!fetchIds.length) {
+    chrome.storage.local.set({ watchlistCache: [], watchlistCacheTs: Date.now() });
+    chrome.action.setBadgeText({ text: '' });
+    return;
+  }
   try {
-    const coins = await fetchMarketData(watchlist, currency);
-    const ts = Date.now();
-    chrome.storage.local.set({ watchlistCache: coins, watchlistCacheTs: ts });
-    updateBadge(coins);
-    if (settings.alertsEnabled && settings.alerts?.length) {
-      checkAlerts(coins, settings.alerts, settings.currencySymbol || '$');
+    const coins = await fetchMarketData(fetchIds, currency);
+    // Cache only watchlist coins, in the user's chosen order
+    const order = new Map(watchlist.map((id, i) => [id, i]));
+    const wlCoins = coins
+      .filter(c => order.has(c.id))
+      .sort((a, b) => order.get(a.id) - order.get(b.id));
+    chrome.storage.local.set({ watchlistCache: wlCoins, watchlistCacheTs: Date.now() });
+    updateBadge(wlCoins);
+    if (settings.alertsEnabled && alerts.length) {
+      checkAlerts(coins, alerts, settings.currencySymbol || '$');
     }
   } catch (err) {
     console.warn('[CryptoLens] Price refresh failed:', err.message);
@@ -81,7 +102,7 @@ function checkAlerts(coins, alerts, currSymbol) {
       type: 'basic',
       iconUrl: chrome.runtime.getURL('icons/icon48.png'),
       title: `CryptoLens: ${alert.coinName || alert.coinId}`,
-      message: `Price ${alert.type === 'above' ? 'rose above' : 'dropped below'} ${currSymbol}${alert.price.toLocaleString()} — now ${currSymbol}${alert.currentPrice.toLocaleString()}`,
+      message: `Price ${alert.type === 'above' ? 'rose above' : 'dropped below'} ${currSymbol}${fmtNotifPrice(alert.price)} — now ${currSymbol}${fmtNotifPrice(alert.currentPrice)}`,
       priority: 2,
     });
   }
@@ -300,9 +321,16 @@ async function handleMessage(msg) {
     case 'SAVE_SETTINGS': {
       const merged = { ...settings, ...msg.payload };
       await chrome.storage.sync.set({ settings: merged });
-      chrome.storage.local.set({ watchlistCacheTs: 0 });
-      createRefreshAlarm(merged);
-      refreshWatchlistPrices(merged);
+      if (merged.refreshInterval !== settings.refreshInterval) createRefreshAlarm(merged);
+      // Only refetch when something price-affecting changed
+      const needsRefetch =
+        merged.currency !== settings.currency ||
+        JSON.stringify(merged.watchlist) !== JSON.stringify(settings.watchlist) ||
+        JSON.stringify(merged.alerts) !== JSON.stringify(settings.alerts);
+      if (needsRefetch) {
+        chrome.storage.local.set({ watchlistCacheTs: 0 });
+        refreshWatchlistPrices(merged);
+      }
       return { success: true };
     }
 
@@ -315,14 +343,13 @@ async function handleMessage(msg) {
     case 'ADD_TO_WATCHLIST': {
       const { coinId } = msg.payload;
       if (!coinId) return { success: false };
-      const alreadyIn = settings.watchlist.includes(coinId);
-      if (!alreadyIn && settings.watchlist.length < 20) {
-        const updated = { ...settings, watchlist: [...settings.watchlist, coinId] };
-        await chrome.storage.sync.set({ settings: updated });
-        chrome.storage.local.set({ watchlistCacheTs: 0 });
-        refreshWatchlistPrices(updated);
-      }
-      return { success: true, alreadyIn };
+      if (settings.watchlist.includes(coinId)) return { success: true, alreadyIn: true };
+      if (settings.watchlist.length >= 20) return { success: false, reason: 'full' };
+      const updated = { ...settings, watchlist: [...settings.watchlist, coinId] };
+      await chrome.storage.sync.set({ settings: updated });
+      chrome.storage.local.set({ watchlistCacheTs: 0 });
+      refreshWatchlistPrices(updated);
+      return { success: true, alreadyIn: false };
     }
 
     default:

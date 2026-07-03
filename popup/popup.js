@@ -436,12 +436,15 @@ function renderTrending(coins) {
       const coinId = btn.dataset.id;
       try {
         const r = await msg('ADD_TO_WATCHLIST', { coinId });
-        btn.classList.add('in-wl');
-        btn.textContent = '✓';
-        btn.title = 'In watchlist';
-        if (!r.alreadyIn) {
-          watchlistCoins = [];
-          loadWatchlist();
+        if (r?.success) {
+          btn.classList.add('in-wl');
+          btn.textContent = '✓';
+          btn.title = 'In watchlist';
+          if (!r.alreadyIn) loadWatchlist();
+        } else if (r?.reason === 'full') {
+          btn.textContent = '!';
+          btn.title = 'Watchlist is full (max 20 coins)';
+          setTimeout(() => { btn.textContent = '+'; btn.title = 'Add to watchlist'; }, 2500);
         }
       } catch (_) {}
     });
@@ -453,12 +456,8 @@ async function loadMarket() {
   // Skip full rebuild if market data was loaded within the last 2 minutes
   if (section.innerHTML && Date.now() - marketLoadedAt < 120_000) return;
 
-  section.innerHTML = `
-    <div class="market-inner">
-      <div class="widget">
-        <div class="widget-title">Fear &amp; Greed Index</div>
-        <div class="fg-wrap" id="fgContent"><div class="spinner" style="margin:20px auto"></div></div>
-      </div>
+  const gasEnabled = settings.gasTrackerEnabled !== false;
+  const gasWidget = gasEnabled ? `
       <div class="widget">
         <div class="widget-title">ETH Gas Tracker <span class="widget-unit">Gwei</span></div>
         <div class="gas-row">
@@ -467,7 +466,15 @@ async function loadMarket() {
           <div class="gas-cell" id="gasFast"><span class="gas-lbl">Fast</span><span class="gas-val">—</span></div>
         </div>
         <div id="gasCalcEl"></div>
+      </div>` : '';
+
+  section.innerHTML = `
+    <div class="market-inner">
+      <div class="widget">
+        <div class="widget-title">Fear &amp; Greed Index</div>
+        <div class="fg-wrap" id="fgContent"><div class="spinner" style="margin:20px auto"></div></div>
       </div>
+      ${gasWidget}
       <div class="widget">
         <div class="widget-title">Quick Converter</div>
         <div id="convSection"></div>
@@ -501,7 +508,7 @@ async function loadMarket() {
   try {
     const [market, gas, trending] = await Promise.all([
       msg('GET_MARKET_OVERVIEW'),
-      msg('GET_GAS'),
+      gasEnabled ? msg('GET_GAS') : Promise.resolve(null),
       msg('GET_TRENDING'),
     ]);
 

@@ -8,6 +8,15 @@ function coinDisplayName(id) {
   return _idNameMap[id] || id.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }
 
+function fmtPrice(p, sym) {
+  sym = sym || '$';
+  if (p === null || p === undefined || isNaN(p)) return sym + '—';
+  if (p >= 1000) return sym + p.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  if (p >= 1) return sym + p.toFixed(2);
+  if (p >= 0.001) return sym + p.toFixed(4);
+  return sym + p.toFixed(8);
+}
+
 let settings = { ...DEFAULT_SETTINGS };
 const $ = id => document.getElementById(id);
 
@@ -176,13 +185,17 @@ $('coinSearch').addEventListener('input', e => {
         btn.addEventListener('click', () => {
           const item = btn.closest('.s-sr-item');
           const id = item.dataset.id;
-          if (!(settings.watchlist || []).includes(id) && (settings.watchlist || []).length < 20) {
-            settings.watchlist = [...(settings.watchlist || []), id];
-            save({ watchlist: settings.watchlist });
-            renderWatchlist();
-            $('coinSearch').value = '';
-            el.classList.add('hidden');
+          if ((settings.watchlist || []).includes(id)) return;
+          if ((settings.watchlist || []).length >= 20) {
+            btn.textContent = 'List full (20)';
+            setTimeout(() => { btn.textContent = '+ Add'; }, 2000);
+            return;
           }
+          settings.watchlist = [...(settings.watchlist || []), id];
+          save({ watchlist: settings.watchlist });
+          renderWatchlist();
+          $('coinSearch').value = '';
+          el.classList.add('hidden');
         });
       });
     } catch { el.classList.add('hidden'); }
@@ -210,7 +223,7 @@ function renderPortfolio() {
     <div class="s-list-item">
       <div class="s-item-info">
         <span class="s-item-label">${h.coinName || coinDisplayName(h.coinId)}</span>
-        <span class="s-item-sub">${h.amount} ${(h.coinSymbol || '').toUpperCase()} &middot; avg ${sym}${(h.avgBuyPrice || 0).toLocaleString()}</span>
+        <span class="s-item-sub">${h.amount} ${(h.coinSymbol || '').toUpperCase()}${h.avgBuyPrice ? ` &middot; avg ${fmtPrice(h.avgBuyPrice, sym)}` : ''}</span>
       </div>
       <button class="s-remove-btn" data-idx="${i}" title="Remove">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
@@ -289,7 +302,7 @@ function renderAlerts() {
       <div class="s-item-info">
         <span class="s-item-label">${a.coinName || coinDisplayName(a.coinId)}</span>
         <span class="s-item-sub">
-          ${a.type === 'above' ? '↑ Above' : '↓ Below'} ${sym}${(a.price || 0).toLocaleString()}
+          ${a.type === 'above' ? '↑ Above' : '↓ Below'} ${fmtPrice(a.price || 0, sym)}
           &middot; <em>${repeatLabel}</em>
           &middot; ${firedLabel}
           ${isTriggeredOnce ? ' <span class="s-tag-triggered">Triggered</span>' : ''}

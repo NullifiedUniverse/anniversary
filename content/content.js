@@ -335,8 +335,13 @@
         try {
           chrome.runtime.sendMessage({ type: 'ADD_TO_WATCHLIST', payload: { coinId: coinInfo.id } }, r => {
             if (chrome.runtime.lastError || !r) return;
-            watchBtn.textContent = '✓ Watching';
-            watchBtn.classList.add('cl-watch-active');
+            if (r.success) {
+              watchBtn.textContent = '✓ Watching';
+              watchBtn.classList.add('cl-watch-active');
+            } else if (r.reason === 'full') {
+              watchBtn.textContent = 'List full';
+              setTimeout(() => { watchBtn.textContent = '+ Watch'; }, 2000);
+            }
           });
         } catch (_) {}
       });
@@ -350,6 +355,7 @@
     const el = getTooltip();
     el.innerHTML = `<div class="cl-err">⚠️ ${msg}</div>`;
     place(el, rect);
+    requestAnimationFrame(() => el.classList.add('cl-visible'));
     scheduleHide(3000);
   }
 

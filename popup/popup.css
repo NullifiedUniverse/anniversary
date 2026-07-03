@@ -503,7 +503,7 @@ body {
 .hidden { display: none !important; }
 
 /* ── Compact mode ────────────────────────────────────────────────────────────────── */
-body.compact .coin-row { padding: 6px 10px; }
-body.compact .coin-sym { display: none; }
-body.compact .coin-spark { display: none; }
-body.compact .coin-av { width: 28px; height: 28px; font-size: 11px; }
+body.compact #watchlist .coin-row { padding: 6px 10px; }
+body.compact #watchlist .coin-sym { display: none; }
+body.compact #watchlist .coin-spark { display: none; }
+body.compact #watchlist .coin-av { width: 28px; height: 28px; font-size: 11px; }
