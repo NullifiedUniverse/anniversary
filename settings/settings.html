@@ -64,6 +64,17 @@
           <div class="s-card-header">ETH Gas Tracker</div>
           <div class="s-card-body"><label class="s-toggle-row"><span><strong>Show gas tracker in Market tab</strong><small>Displays Slow / Standard / Fast fees in Gwei</small></span><label class="toggle"><input type="checkbox" id="gasTrackerEnabled"><span class="toggle-track"></span></label></label></div>
         </div>
+        <div class="s-card">
+          <div class="s-card-header">Backup &amp; Restore</div>
+          <div class="s-card-body">
+            <p class="s-desc">Export your watchlist, portfolio, alerts and preferences to a JSON file &mdash; or restore everything from a previous backup.</p>
+            <div class="s-form-actions">
+              <button id="exportBtn" class="s-btn-secondary">Export Data</button>
+              <button id="importBtn" class="s-btn-ghost">Import Backup</button>
+              <input type="file" id="importFile" accept=".json,application/json" class="hidden">
+            </div>
+          </div>
+        </div>
       </section>
 
       <section id="watchlist" class="s-section">
@@ -122,9 +133,9 @@
         <h2>About</h2>
         <div class="about-card">
           <div class="about-logo"><svg width="60" height="60" viewBox="0 0 24 24" fill="none"><rect width="24" height="24" rx="7" fill="#f7931a"/><path d="M7 16l3-6 3 4 2-3 2 5" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-          <h3>CryptoLens <span class="version">v1.1.1</span></h3>
+          <h3>CryptoLens <span class="version">v1.2.0</span></h3>
           <p>A quality-of-life Chrome extension for crypto traders and enthusiasts. Get real-time price data on any webpage, track your portfolio, and stay on top of the market &mdash; without leaving your current tab.</p>
-          <div class="feature-list"><div class="feature-item"><span class="fi-dot"></span>Instant price tooltip on any selected ticker</div><div class="feature-item"><span class="fi-dot"></span>Watchlist with 7-day sparklines</div><div class="feature-item"><span class="fi-dot"></span>Portfolio tracker with real-time P&amp;L</div><div class="feature-item"><span class="fi-dot"></span>Fear &amp; Greed Index</div><div class="feature-item"><span class="fi-dot"></span>ETH Gas tracker (Slow/Std/Fast)</div><div class="feature-item"><span class="fi-dot"></span>Price alerts with one-shot and repeat modes</div></div>
+          <div class="feature-list"><div class="feature-item"><span class="fi-dot"></span>Instant price tooltip on any selected ticker</div><div class="feature-item"><span class="fi-dot"></span>Watchlist with 7-day sparklines</div><div class="feature-item"><span class="fi-dot"></span>Portfolio tracker with real-time P&amp;L</div><div class="feature-item"><span class="fi-dot"></span>Fear &amp; Greed Index</div><div class="feature-item"><span class="fi-dot"></span>ETH Gas tracker (Slow/Std/Fast)</div><div class="feature-item"><span class="fi-dot"></span>Price alerts with one-shot and repeat modes</div><div class="feature-item"><span class="fi-dot"></span>Set alerts right from the popup</div><div class="feature-item"><span class="fi-dot"></span>Backup export &amp; import</div></div>
           <div class="about-footer">Data by <strong>CoinGecko</strong> (free API) &middot; Fear &amp; Greed by <strong>Alternative.me</strong> &middot; All data stored locally on your device</div>
         </div>
       </section>

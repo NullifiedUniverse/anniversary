@@ -186,6 +186,8 @@ body {
 }
 .expand-actions {
   padding: 6px 14px 4px;
+  display: flex;
+  gap: 7px;
 }
 .copy-price-btn {
   background: var(--bg-raised); border: 1px solid var(--border);
@@ -195,6 +197,35 @@ body {
   transition: background 0.12s, color 0.12s, border-color 0.12s;
 }
 .copy-price-btn:hover { background: rgba(247,147,26,0.1); border-color: var(--acc-border); color: var(--acc); }
+.alert-btn {
+  background: var(--bg-raised); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); color: var(--t-muted);
+  font-size: 11.5px; font-weight: 700; padding: 4px 10px;
+  display: inline-flex; align-items: center; gap: 5px;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+.alert-btn:hover { background: rgba(247,147,26,0.1); border-color: var(--acc-border); color: var(--acc); }
+.alert-inline {
+  display: flex; gap: 7px; align-items: center;
+  padding: 2px 14px 8px;
+  animation: slideIn 0.15s ease;
+}
+.alert-inline select, .alert-inline input {
+  background: var(--bg-overlay); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); color: var(--t-primary);
+  font-size: 11.5px; padding: 5px 8px; outline: none;
+  transition: border-color 0.15s;
+}
+.alert-inline select { flex: 0 0 auto; cursor: pointer; }
+.alert-inline input { flex: 1; min-width: 0; font-variant-numeric: tabular-nums; }
+.alert-inline input:focus, .alert-inline select:focus { border-color: var(--acc); }
+.ai-save {
+  background: var(--acc-glow); border: 1px solid var(--acc-border);
+  border-radius: var(--radius-sm); color: var(--acc);
+  font-size: 11px; font-weight: 700; padding: 5px 12px; white-space: nowrap;
+  transition: background 0.12s;
+}
+.ai-save:hover { background: rgba(247,147,26,0.25); }
 .expand-links {
   display: flex;
   gap: 7px;
@@ -274,7 +305,7 @@ body {
 .ps-value { font-size: 16px; font-weight: 800; letter-spacing: -0.5px; color: var(--t-primary); }
 .ps-value.up { color: var(--green); }
 .ps-value.down { color: var(--red); }
-.portfolio-row { position: relative; cursor: default; }
+.portfolio-row { position: relative; cursor: pointer; }
 .rm-holding { opacity: 0; transition: opacity 0.15s; color: var(--t-subtle) !important; }
 .portfolio-row:hover .rm-holding { opacity: 1; }
 
@@ -501,6 +532,21 @@ body {
 .up   { color: var(--green) !important; }
 .down { color: var(--red)   !important; }
 .hidden { display: none !important; }
+
+/* ── Live refresh, alerts & portfolio QoL ─────────────────────────── */
+@keyframes flashUp   { 0% { color: var(--green); } 100% { color: var(--t-primary); } }
+@keyframes flashDown { 0% { color: var(--red);   } 100% { color: var(--t-primary); } }
+.coin-price.flash-up   { animation: flashUp 1.6s ease-out; }
+.coin-price.flash-down { animation: flashDown 1.6s ease-out; }
+
+.row-bell { display: inline-block; margin-left: 5px; color: var(--acc); opacity: 0.85; }
+
+.trend-row { cursor: pointer; transition: background 0.12s; }
+.trend-row:hover { background: var(--bg-hover); }
+
+.alloc-bar-wrap { grid-column: 1 / -1; padding: 0 16px 12px; }
+.alloc-bar { display: flex; height: 6px; border-radius: 3px; overflow: hidden; gap: 2px; }
+.alloc-seg { min-width: 3px; border-radius: 2px; }
 
 /* ── Compact mode ────────────────────────────────────────────────────────────────── */
 body.compact #watchlist .coin-row { padding: 6px 10px; }

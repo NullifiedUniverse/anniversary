@@ -384,4 +384,55 @@ $('saveAlertBtn').addEventListener('click', async () => {
   renderAlerts();
 });
 
+// === BACKUP & RESTORE ===
+$('exportBtn').addEventListener('click', () => {
+  const payload = {
+    app: 'CryptoLens',
+    format: 1,
+    exportedAt: new Date().toISOString(),
+    settings,
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `cryptolens-backup-${new Date().toISOString().slice(0, 10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+$('importBtn').addEventListener('click', () => $('importFile').click());
+
+$('importFile').addEventListener('change', async e => {
+  const file = e.target.files[0];
+  e.target.value = '';
+  if (!file) return;
+  try {
+    const data = JSON.parse(await file.text());
+    const s = data.settings || data;
+    if (!s || typeof s !== 'object' || !Array.isArray(s.watchlist)) {
+      throw new Error('not a CryptoLens backup');
+    }
+    if (!confirm('Replace your current watchlist, portfolio, alerts and preferences with this backup?')) return;
+    // Only accept known keys, and sanitize the collection fields
+    const clean = {};
+    for (const k of Object.keys(DEFAULT_SETTINGS)) {
+      if (k in s) clean[k] = s[k];
+    }
+    clean.watchlist = (clean.watchlist || []).filter(x => typeof x === 'string').slice(0, 20);
+    clean.portfolio = Array.isArray(clean.portfolio)
+      ? clean.portfolio.filter(h => h && typeof h.coinId === 'string' && typeof h.amount === 'number')
+      : [];
+    clean.alerts = Array.isArray(clean.alerts)
+      ? clean.alerts.filter(a => a && typeof a.coinId === 'string' && typeof a.price === 'number')
+      : [];
+    settings = { ...DEFAULT_SETTINGS, ...clean };
+    await sendMsg('SAVE_SETTINGS', settings);
+    await load();
+    showSaved();
+  } catch {
+    alert('Import failed — that file is not a valid CryptoLens backup.');
+  }
+});
+
 load();

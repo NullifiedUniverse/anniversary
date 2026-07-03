@@ -7,6 +7,11 @@ let watchlistCoins = [];
 let watchlistSort = 'default';
 let expandedCoinId = null;
 let marketLoadedAt = 0;
+let prevPrices = {};
+let flashMap = {};
+let lastUpdatedAt = 0;
+
+const FALLBACK_COLORS = ['#f7931a', '#627eea', '#00d26a', '#9945ff', '#ff4d4d', '#12aaff'];
 
 const $ = id => document.getElementById(id);
 
@@ -35,6 +40,13 @@ function fmtBig(n, sym) {
   if (n >= 1e9) return sym + (n / 1e9).toFixed(2) + 'B';
   if (n >= 1e6) return sym + (n / 1e6).toFixed(2) + 'M';
   return sym + n.toLocaleString();
+}
+
+function roundForInput(p) {
+  if (p === null || p === undefined || isNaN(p)) return '';
+  if (p >= 1000) return Math.round(p);
+  if (p >= 1) return parseFloat(p.toFixed(2));
+  return parseFloat(p.toPrecision(4));
 }
 
 function avatar(coin) {
@@ -128,6 +140,18 @@ function buildExpandPanel(coin) {
     <div class="expand-chart">${sparkLarge(sp, isUp)}</div>
     <div class="expand-actions">
       <button class="copy-price-btn" data-price="${priceStr}">Copy price · ${priceStr}</button>
+      <button class="alert-btn" title="Set a price alert">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        Alert
+      </button>
+    </div>
+    <div class="alert-inline hidden">
+      <select class="ai-type">
+        <option value="above">Above ↑</option>
+        <option value="below">Below ↓</option>
+      </select>
+      <input type="number" class="ai-price" step="any" min="0" value="${roundForInput(coin.current_price)}" placeholder="Target price">
+      <button class="ai-save">Set alert</button>
     </div>
     <div class="expand-links">
       ${exchangeLinks}
@@ -153,18 +177,19 @@ function renderWatchlist() {
     const sp = c.sparkline_in_7d?.price || [];
     const isUp = (ch ?? 0) >= 0;
     const isExpanded = expandedCoinId === c.id;
+    const hasAlert = (settings.alerts || []).some(a => a.coinId === c.id);
 
     const rowEl = document.createElement('div');
     rowEl.className = 'coin-row' + (isExpanded ? ' row-expanded' : '');
     rowEl.innerHTML = `
       ${avatar(c)}
       <div class="coin-meta">
-        <span class="coin-name">${c.name}</span>
+        <span class="coin-name">${c.name}${hasAlert ? '<svg class="row-bell" width="9" height="9" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>' : ''}</span>
         <span class="coin-sym">${c.symbol.toUpperCase()}</span>
       </div>
       <div class="coin-spark">${miniSpark(sp, isUp)}</div>
       <div class="coin-price-col">
-        <span class="coin-price">${fmtPrice(c.current_price, sym)}</span>
+        <span class="coin-price${flashMap[c.id] ? ' flash-' + flashMap[c.id] : ''}">${fmtPrice(c.current_price, sym)}</span>
         ${changeBadge(ch)}
       </div>
       <svg class="row-chevron${isExpanded ? ' open' : ''}" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
@@ -193,18 +218,63 @@ function renderWatchlist() {
           }).catch(() => {});
         });
       }
+      const alertBtn = panelEl.querySelector('.alert-btn');
+      const alertForm = panelEl.querySelector('.alert-inline');
+      if (alertBtn && alertForm) {
+        alertBtn.addEventListener('click', e => {
+          e.stopPropagation();
+          alertForm.classList.toggle('hidden');
+          if (!alertForm.classList.contains('hidden')) alertForm.querySelector('.ai-price').focus();
+        });
+        alertForm.addEventListener('click', e => e.stopPropagation());
+        alertForm.querySelector('.ai-save').addEventListener('click', async e => {
+          e.stopPropagation();
+          const saveBtn = alertForm.querySelector('.ai-save');
+          const price = parseFloat(alertForm.querySelector('.ai-price').value);
+          const type = alertForm.querySelector('.ai-type').value;
+          if (!price || isNaN(price) || price <= 0) return;
+          const alerts = [...(settings.alerts || [])];
+          const dupe = alerts.some(a => a.coinId === c.id && a.type === type && Math.abs(a.price - price) < 1e-9);
+          if (dupe) {
+            saveBtn.textContent = 'Exists!';
+            setTimeout(() => { saveBtn.textContent = 'Set alert'; }, 1600);
+            return;
+          }
+          alerts.push({ coinId: c.id, coinSymbol: c.symbol, coinName: c.name, type, price, repeatMode: 'once', lastFiredAt: 0 });
+          try {
+            await msg('SAVE_SETTINGS', { alerts });
+            settings.alerts = alerts;
+            saveBtn.textContent = '✓ Set';
+            setTimeout(() => renderWatchlist(), 900);
+          } catch {
+            saveBtn.textContent = 'Failed';
+            setTimeout(() => { saveBtn.textContent = 'Set alert'; }, 1600);
+          }
+        });
+      }
       listEl.appendChild(panelEl);
     }
   });
+
+  flashMap = {};
 }
 
 async function loadWatchlist() {
   try {
     const data = await msg('GET_WATCHLIST');
-    watchlistCoins = data.coins || [];
+    const coins = data.coins || [];
+    coins.forEach(c => {
+      const prev = prevPrices[c.id];
+      if (prev != null && c.current_price != null && c.current_price !== prev) {
+        flashMap[c.id] = c.current_price > prev ? 'up' : 'down';
+      }
+      prevPrices[c.id] = c.current_price;
+    });
+    watchlistCoins = coins;
     if (data.currencySymbol) settings.currencySymbol = data.currencySymbol;
     renderWatchlist();
-    $('lastUpdated').textContent = 'Updated ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    lastUpdatedAt = Date.now();
+    renderUpdatedTs();
   } catch {
     $('watchlistList').innerHTML = `<div class="empty error">Failed to load prices</div>`;
   }
@@ -248,7 +318,7 @@ async function loadPortfolio() {
       totalVal += val; totalCost += cost;
       const cls = pnl >= 0 ? 'up' : 'down';
       const sign = pnl >= 0 ? '+' : '-';
-      return `<div class="coin-row portfolio-row" data-id="${h.coinId}">
+      return `<div class="coin-row portfolio-row" data-id="${h.coinId}" title="Click to edit">
         <div class="coin-meta">
           <span class="coin-name">${h.coinName || h.coinId}</span>
           <span class="coin-sym">${h.amount} ${(h.coinSymbol || '').toUpperCase()}</span>
@@ -269,9 +339,42 @@ async function loadPortfolio() {
     const pnlEl = $('portfolioPnl');
     pnlEl.textContent = `${totalPnl >= 0 ? '+' : ''}${fmtBig(Math.abs(totalPnl), sym)} (${totalPct.toFixed(1)}%)`;
     pnlEl.className = `ps-value ${totalPnl >= 0 ? 'up' : 'down'}`;
+
+    const allocEl = $('allocBar');
+    if (allocEl) {
+      if (totalVal > 0) {
+        const segs = portfolio
+          .map(h => ({ h, val: h.amount * (priceMap[h.coinId] ?? 0) }))
+          .filter(x => x.val > 0)
+          .sort((a, b) => b.val - a.val)
+          .map(({ h, val }, i) => {
+            const pct = (val / totalVal) * 100;
+            const color = COIN_COLORS[h.coinId] || FALLBACK_COLORS[i % FALLBACK_COLORS.length];
+            return `<div class="alloc-seg" style="width:${pct.toFixed(2)}%;background:${color}" title="${(h.coinSymbol || h.coinId).toUpperCase()} · ${pct.toFixed(1)}%"></div>`;
+          }).join('');
+        allocEl.innerHTML = `<div class="alloc-bar">${segs}</div>`;
+        allocEl.classList.remove('hidden');
+      } else {
+        allocEl.classList.add('hidden');
+      }
+    }
+
     el.innerHTML = rows.join('');
     el.querySelectorAll('.rm-holding').forEach(btn => {
       btn.addEventListener('click', e => { e.stopPropagation(); removeHolding(btn.dataset.id); });
+    });
+    el.querySelectorAll('.portfolio-row').forEach(row => {
+      row.addEventListener('click', () => {
+        const h = (settings.portfolio || []).find(x => x.coinId === row.dataset.id);
+        if (!h) return;
+        selectedHoldingCoin = { id: h.coinId, symbol: h.coinSymbol, name: h.coinName };
+        $('holdingCoinSearch').value = `${(h.coinSymbol || '').toUpperCase()} — ${h.coinName || h.coinId}`;
+        $('holdingAmount').value = h.amount;
+        $('holdingBuyPrice').value = h.avgBuyPrice || '';
+        $('holdingCurSym').textContent = settings.currencySymbol || '$';
+        $('saveHoldingBtn').textContent = 'Update Holding';
+        $('addHoldingForm').classList.remove('hidden');
+      });
     });
   } catch {
     el.innerHTML = `<div class="empty error">Failed to load portfolio</div>`;
@@ -319,6 +422,7 @@ $('cancelHoldingBtn').addEventListener('click', () => {
   $('holdingCoinSearch').value = '';
   $('holdingAmount').value = '';
   $('holdingBuyPrice').value = '';
+  $('saveHoldingBtn').textContent = 'Add Holding';
 });
 
 $('saveHoldingBtn').addEventListener('click', async () => {
@@ -416,7 +520,7 @@ function renderTrending(coins) {
     const chSign = (ch ?? 0) > 0 ? '+' : '';
     const priceStr = (c.price && typeof c.price === 'number') ? fmtPrice(c.price, sym) : '—';
     const inWl = watchlistIds.has(c.id);
-    return `<div class="trend-row">
+    return `<div class="trend-row" data-id="${c.id}" title="Open on CoinGecko">
       <span class="trend-rank">${i + 1}</span>
       <div class="trend-meta">
         <span class="trend-name">${c.name}</span>
@@ -429,6 +533,12 @@ function renderTrending(coins) {
       <button class="trend-watch${inWl ? ' in-wl' : ''}" data-id="${c.id}" title="${inWl ? 'In watchlist' : 'Add to watchlist'}">${inWl ? '✓' : '+'}</button>
     </div>`;
   }).join('');
+
+  el.querySelectorAll('.trend-row').forEach(row => {
+    row.addEventListener('click', () => {
+      chrome.tabs.create({ url: `https://www.coingecko.com/en/coins/${row.dataset.id}` });
+    });
+  });
 
   el.querySelectorAll('.trend-watch:not(.in-wl)').forEach(btn => {
     btn.addEventListener('click', async e => {
@@ -584,6 +694,24 @@ document.addEventListener('click', e => {
     $('holdingSearchResults').classList.add('hidden');
   }
 });
+
+function renderUpdatedTs() {
+  if (!lastUpdatedAt) return;
+  const secs = Math.max(0, Math.round((Date.now() - lastUpdatedAt) / 1000));
+  $('lastUpdated').textContent =
+    secs < 5 ? 'Updated just now'
+    : secs < 60 ? `Updated ${secs}s ago`
+    : `Updated ${Math.floor(secs / 60)}m ago`;
+}
+setInterval(renderUpdatedTs, 5_000);
+
+// Live-refresh the watchlist while the popup stays open (served from the
+// service-worker cache, so this only hits the network when the cache expires)
+setInterval(() => {
+  const onWatchlist = document.querySelector('.tab.active')?.dataset.tab === 'watchlist';
+  const alertFormOpen = document.querySelector('.alert-inline:not(.hidden)');
+  if (onWatchlist && !alertFormOpen) loadWatchlist();
+}, 30_000);
 
 async function init() {
   try { settings = await msg('GET_SETTINGS'); } catch { settings = { ...DEFAULT_SETTINGS }; }
