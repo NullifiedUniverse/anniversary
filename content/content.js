@@ -199,7 +199,8 @@
     const W = 296;
     let x = rect.left + rect.width / 2 - W / 2;
     let y = rect.bottom + MARGIN;
-    if (y + 260 > vpH) y = rect.top - MARGIN - 260;
+    const EST_H = 300;
+    if (y + EST_H > vpH) y = rect.top - MARGIN - EST_H;
     x = Math.max(MARGIN, Math.min(x, vpW - W - MARGIN));
     el.style.left = `${x + window.scrollX}px`;
     el.style.top = `${y + window.scrollY}px`;
@@ -245,8 +246,8 @@
     const fillPts = pts + ` ${W},${H} 0,${H}`;
     return `<svg viewBox="0 0 ${W} ${H}" class="cl-spark" preserveAspectRatio="none">
       <defs><linearGradient id="clsg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${color}" stop-opacity="0.18"/><stop offset="100%" stop-color="${color}" stop-opacity="0"/></linearGradient></defs>
-      <polygon points="${fillPts}" fill="url(#clsg)"/>
-      <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      <polygon points="${fillPts}" fill="url(#clsg)" class="cl-spark-fill"/>
+      <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" pathLength="1" class="cl-spark-line"/>
     </svg>`;
   }
 

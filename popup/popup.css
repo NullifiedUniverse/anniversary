@@ -37,6 +37,7 @@
 /* ── Reset ────────────────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 button { font-family: var(--font); cursor: pointer; }
+button:focus-visible, a:focus-visible { outline: 2px solid var(--acc-border); outline-offset: 2px; }
 input, select { font-family: var(--font); }
 svg { display: block; }
 
@@ -92,6 +93,7 @@ body {
   transition: color 0.15s, background 0.15s;
 }
 .icon-btn:hover { color: var(--t-primary); background: var(--bg-hover); }
+.icon-btn:active { transform: scale(0.9); }
 .icon-btn.spinning svg { animation: spin 0.65s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
@@ -120,7 +122,8 @@ body {
 }
 .tab-panel::-webkit-scrollbar { width: 4px; }
 .tab-panel::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 4px; }
-.tab-panel.active { display: flex; }
+.tab-panel.active { display: flex; animation: panelIn 0.18s ease; }
+@keyframes panelIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 
 /* ── Sort controls ────────────────────────────────────────────────────────────────── */
 .list-controls {
@@ -533,6 +536,29 @@ body {
 .down { color: var(--red)   !important; }
 .hidden { display: none !important; }
 
+/* ── Motion & states ──────────────────────────────────────────────── */
+@keyframes rowIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.coin-row.row-enter { animation: rowIn 0.3s ease backwards; }
+
+@keyframes sparkDraw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes sparkFade { from { opacity: 0; } to { opacity: 1; } }
+.spark-draw { stroke-dasharray: 1; animation: sparkDraw 0.7s ease-out forwards; }
+.spark-fill { animation: sparkFade 0.9s ease-out; }
+
+.search-dropdown { animation: slideIn 0.12s ease; }
+
+.empty-cta {
+  background: var(--acc-glow);
+  border: 1px solid var(--acc-border);
+  border-radius: var(--radius-sm);
+  color: var(--acc);
+  font-size: 12px; font-weight: 700;
+  padding: 7px 16px; margin-top: 2px;
+  transition: background 0.15s, transform 0.1s;
+}
+.empty-cta:hover { background: rgba(247,147,26,0.25); transform: translateY(-1px); }
+.empty-cta:active { transform: translateY(0); }
+
 /* ── Live refresh, alerts & portfolio QoL ─────────────────────────── */
 @keyframes flashUp   { 0% { color: var(--green); } 100% { color: var(--t-primary); } }
 @keyframes flashDown { 0% { color: var(--red);   } 100% { color: var(--t-primary); } }
@@ -553,3 +579,12 @@ body.compact #watchlist .coin-row { padding: 6px 10px; }
 body.compact #watchlist .coin-sym { display: none; }
 body.compact #watchlist .coin-spark { display: none; }
 body.compact #watchlist .coin-av { width: 28px; height: 28px; font-size: 11px; }
+
+/* ── Reduced motion ───────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

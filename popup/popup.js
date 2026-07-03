@@ -10,6 +10,8 @@ let marketLoadedAt = 0;
 let prevPrices = {};
 let flashMap = {};
 let lastUpdatedAt = 0;
+let _staggerDone = false;
+let _lastExpandedId = null;
 
 const FALLBACK_COLORS = ['#f7931a', '#627eea', '#00d26a', '#9945ff', '#ff4d4d', '#12aaff'];
 
@@ -78,7 +80,7 @@ function miniSpark(prices, isUp) {
   return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 }
 
-function sparkLarge(prices, isUp) {
+function sparkLarge(prices, isUp, animate) {
   if (!prices?.length) return '';
   const W = 326, H = 52;
   const sample = prices.filter((_, i) => i % Math.ceil(prices.length / 80) === 0);
@@ -98,8 +100,8 @@ function sparkLarge(prices, isUp) {
       <stop offset="0%" stop-color="${color}" stop-opacity="0.2"/>
       <stop offset="100%" stop-color="${color}" stop-opacity="0"/>
     </linearGradient></defs>
-    <polygon points="${fillPts}" fill="url(#sg${uid})"/>
-    <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <polygon points="${fillPts}" fill="url(#sg${uid})"${animate ? ' class="spark-fill"' : ''}/>
+    <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" pathLength="1"${animate ? ' class="spark-draw"' : ''}/>
   </svg>`;
 }
 
@@ -125,7 +127,7 @@ function sortCoins(coins, sort) {
 }
 
 // ── Watchlist render ──────────────────────────────────────────────────────────
-function buildExpandPanel(coin) {
+function buildExpandPanel(coin, animateChart) {
   const sp = coin.sparkline_in_7d?.price || [];
   const isUp = (coin.price_change_percentage_24h ?? 0) >= 0;
   const sym = coin.symbol.toUpperCase();
@@ -137,7 +139,7 @@ function buildExpandPanel(coin) {
     <a href="https://www.tradingview.com/chart/?symbol=BINANCE:${sym}USDT" target="_blank" rel="noopener noreferrer" class="exch-pill">TradingView ↗</a>
   `;
   return `
-    <div class="expand-chart">${sparkLarge(sp, isUp)}</div>
+    <div class="expand-chart">${sparkLarge(sp, isUp, animateChart)}</div>
     <div class="expand-actions">
       <button class="copy-price-btn" data-price="${priceStr}">Copy price · ${priceStr}</button>
       <button class="alert-btn" title="Set a price alert">
@@ -165,14 +167,26 @@ function renderWatchlist() {
   const sym = settings.currencySymbol || '$';
   const listEl = $('watchlistList');
 
+  // Draw the expand chart only when a panel is newly opened, and stagger
+  // rows only on the very first paint — re-renders stay motion-free
+  const animateChart = expandedCoinId !== _lastExpandedId;
+  _lastExpandedId = expandedCoinId;
+  const doStagger = !_staggerDone && coins.length > 0;
+
   if (!coins.length) {
-    listEl.innerHTML = `<div class="empty">Watchlist is empty.<br>Add coins in Settings.</div>`;
+    listEl.innerHTML = `
+      <div class="empty">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.45"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        <span>Your watchlist is empty</span>
+        <button class="empty-cta">+ Add coins</button>
+      </div>`;
+    listEl.querySelector('.empty-cta').addEventListener('click', () => chrome.runtime.openOptionsPage());
     return;
   }
 
   listEl.innerHTML = '';
 
-  coins.forEach(c => {
+  coins.forEach((c, i) => {
     const ch = c.price_change_percentage_24h;
     const sp = c.sparkline_in_7d?.price || [];
     const isUp = (ch ?? 0) >= 0;
@@ -181,6 +195,10 @@ function renderWatchlist() {
 
     const rowEl = document.createElement('div');
     rowEl.className = 'coin-row' + (isExpanded ? ' row-expanded' : '');
+    if (doStagger) {
+      rowEl.classList.add('row-enter');
+      rowEl.style.animationDelay = `${Math.min(i * 25, 250)}ms`;
+    }
     rowEl.innerHTML = `
       ${avatar(c)}
       <div class="coin-meta">
@@ -204,7 +222,7 @@ function renderWatchlist() {
     if (isExpanded) {
       const panelEl = document.createElement('div');
       panelEl.className = 'expand-panel';
-      panelEl.innerHTML = buildExpandPanel(c);
+      panelEl.innerHTML = buildExpandPanel(c, animateChart);
       panelEl.querySelectorAll('a').forEach(a => a.addEventListener('click', e => e.stopPropagation()));
       const copyBtn = panelEl.querySelector('.copy-price-btn');
       if (copyBtn) {
@@ -256,6 +274,7 @@ function renderWatchlist() {
     }
   });
 
+  if (doStagger) _staggerDone = true;
   flashMap = {};
 }
 
@@ -288,7 +307,13 @@ async function loadPortfolio() {
   const portfolio = settings.portfolio || [];
   const el = $('portfolioList');
   if (!portfolio.length) {
-    el.innerHTML = `<div class="empty">No holdings yet.</div>`;
+    el.innerHTML = `
+      <div class="empty">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.45"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+        <span>No holdings yet</span>
+        <button class="empty-cta">+ Add your first holding</button>
+      </div>`;
+    el.querySelector('.empty-cta').addEventListener('click', () => $('addHoldingBtn').click());
     $('portfolioSummary').classList.add('hidden');
     return;
   }
