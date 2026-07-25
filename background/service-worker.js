@@ -26,8 +26,12 @@ function formatBadgePrice(price) {
   return price.toFixed(3);
 }
 
-async function updateBadge(coins) {
+async function updateBadge(coins, settings) {
   try {
+    if (settings && settings.badgeEnabled === false) {
+      chrome.action.setBadgeText({ text: '' });
+      return;
+    }
     const lead = coins.find(c => c.id === 'bitcoin') || coins[0];
     if (lead && lead.current_price) {
       chrome.action.setBadgeText({ text: formatBadgePrice(lead.current_price) });
@@ -65,7 +69,7 @@ async function refreshWatchlistPrices(settings) {
       .filter(c => order.has(c.id))
       .sort((a, b) => order.get(a.id) - order.get(b.id));
     chrome.storage.local.set({ watchlistCache: wlCoins, watchlistCacheTs: Date.now() });
-    updateBadge(wlCoins);
+    updateBadge(wlCoins, settings);
     if (settings.alertsEnabled && alerts.length) {
       checkAlerts(coins, alerts, settings.currencySymbol || '$');
     }
@@ -81,9 +85,12 @@ function checkAlerts(coins, alerts, currSymbol) {
 
   for (const alert of alerts) {
     const repeatMode = alert.repeatMode || 'once';
+    const isPctAlert = alert.type === 'chg_up' || alert.type === 'chg_down';
     const lastFiredAt = alert.lastFiredAt || (alert.triggered ? now : 0);
+    // A 24h move stays past its threshold for hours, so one-shot percent
+    // alerts re-arm on a much longer cooldown than price-target alerts
     const cooldown = repeatMode === 'once'
-      ? ALERT_COOLDOWN_ONCE
+      ? (isPctAlert ? 4 * 3_600_000 : ALERT_COOLDOWN_ONCE)
       : (ALERT_REPEAT_INTERVALS[repeatMode] || 0);
 
     if (lastFiredAt && (now - lastFiredAt) < cooldown) continue;
@@ -91,18 +98,25 @@ function checkAlerts(coins, alerts, currSymbol) {
     const coin = coins.find(c => c.id === alert.coinId);
     if (!coin) continue;
     const price = coin.current_price;
-    if ((alert.type === 'above' && price >= alert.price) ||
-        (alert.type === 'below' && price <= alert.price)) {
-      toFire.push({ ...alert, currentPrice: price });
-    }
+    const pct24 = coin.price_change_percentage_24h;
+    const hit =
+      (alert.type === 'above' && price >= alert.price) ||
+      (alert.type === 'below' && price <= alert.price) ||
+      (alert.type === 'chg_up' && pct24 != null && pct24 >= alert.price) ||
+      (alert.type === 'chg_down' && pct24 != null && pct24 <= -alert.price);
+    if (hit) toFire.push({ ...alert, currentPrice: price, currentPct: pct24 });
   }
 
   for (const alert of toFire) {
+    const isPct = alert.type === 'chg_up' || alert.type === 'chg_down';
+    const message = isPct
+      ? `24h change hit ${alert.currentPct >= 0 ? '+' : ''}${alert.currentPct.toFixed(2)}% (threshold ${alert.type === 'chg_up' ? '+' : '−'}${alert.price}%) — now ${currSymbol}${fmtNotifPrice(alert.currentPrice)}`
+      : `Price ${alert.type === 'above' ? 'rose above' : 'dropped below'} ${currSymbol}${fmtNotifPrice(alert.price)} — now ${currSymbol}${fmtNotifPrice(alert.currentPrice)}`;
     chrome.notifications.create(`cl-alert-${Date.now()}-${alert.coinId}`, {
       type: 'basic',
       iconUrl: chrome.runtime.getURL('icons/icon48.png'),
       title: `CryptoLens: ${alert.coinName || alert.coinId}`,
-      message: `Price ${alert.type === 'above' ? 'rose above' : 'dropped below'} ${currSymbol}${fmtNotifPrice(alert.price)} — now ${currSymbol}${fmtNotifPrice(alert.currentPrice)}`,
+      message,
       priority: 2,
     });
   }
@@ -111,7 +125,7 @@ function checkAlerts(coins, alerts, currSymbol) {
     chrome.storage.sync.get({ settings: DEFAULT_SETTINGS }, r => {
       const s = { ...DEFAULT_SETTINGS, ...r.settings };
       s.alerts = s.alerts.map(a => {
-        const isFired = toFire.some(t => t.coinId === a.coinId && t.price === a.price);
+        const isFired = toFire.some(t => t.coinId === a.coinId && t.type === a.type && t.price === a.price);
         const isLegacy = a.triggered === true && !a.lastFiredAt;
         if (isFired || isLegacy) {
           const { triggered: _t, ...rest } = a;
@@ -160,7 +174,7 @@ chrome.contextMenus.onClicked.addListener(async (info) => {
     const priceStr = price >= 1000
       ? sym + price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
       : sym + (price?.toFixed(4) ?? '—');
-    chrome.notifications.create(`cl-price-${Date.now()}`, {
+    chrome.notifications.create(`cl-price-${Date.now()}-${coinId}`, {
       type: 'basic',
       iconUrl: chrome.runtime.getURL('icons/icon48.png'),
       title: `${data.name} (${data.symbol.toUpperCase()})`,
@@ -175,6 +189,12 @@ chrome.contextMenus.onClicked.addListener(async (info) => {
       message: 'Could not fetch price data. Please try again.',
     });
   }
+});
+
+chrome.notifications.onClicked.addListener(id => {
+  const m = id.match(/^cl-(?:alert|price)-\d+-(.+)$/);
+  if (m) chrome.tabs.create({ url: `https://www.coingecko.com/en/coins/${m[1]}` });
+  chrome.notifications.clear(id);
 });
 
 chrome.runtime.onInstalled.addListener(async () => {
@@ -237,11 +257,11 @@ async function handleMessage(msg) {
         chrome.storage.local.get({ watchlistCache: null, watchlistCacheTs: 0 }, r => {
           const age = Date.now() - r.watchlistCacheTs;
           if (r.watchlistCache && age < CACHE_TTL_MS) {
-            resolve({ coins: r.watchlistCache, currency: settings.currency, currencySymbol: settings.currencySymbol });
+            resolve({ coins: r.watchlistCache, currency: settings.currency, currencySymbol: settings.currencySymbol, fetchedAt: r.watchlistCacheTs });
           } else {
             refreshWatchlistPrices(settings).then(() => {
-              chrome.storage.local.get({ watchlistCache: [] }, r2 => {
-                resolve({ coins: r2.watchlistCache || [], currency: settings.currency, currencySymbol: settings.currencySymbol });
+              chrome.storage.local.get({ watchlistCache: [], watchlistCacheTs: 0 }, r2 => {
+                resolve({ coins: r2.watchlistCache || [], currency: settings.currency, currencySymbol: settings.currencySymbol, fetchedAt: r2.watchlistCacheTs });
               });
             });
           }
@@ -254,10 +274,12 @@ async function handleMessage(msg) {
       const cur = reqCur || settings.currency;
       const raw = await fetchSimplePrice(coinIds, cur);
       const priceMap = {};
+      const changeMap = {};
       for (const [id, vals] of Object.entries(raw)) {
         priceMap[id] = vals[cur];
+        changeMap[id] = vals[`${cur}_24h_change`];
       }
-      return { priceMap, currency: settings.currency, currencySymbol: settings.currencySymbol };
+      return { priceMap, changeMap, currency: settings.currency, currencySymbol: settings.currencySymbol };
     }
 
     case 'GET_MARKET_OVERVIEW': {
@@ -322,6 +344,11 @@ async function handleMessage(msg) {
       const merged = { ...settings, ...msg.payload };
       await chrome.storage.sync.set({ settings: merged });
       if (merged.refreshInterval !== settings.refreshInterval) createRefreshAlarm(merged);
+      if (merged.badgeEnabled === false && settings.badgeEnabled !== false) {
+        chrome.action.setBadgeText({ text: '' });
+      } else if (merged.badgeEnabled !== false && settings.badgeEnabled === false) {
+        refreshWatchlistPrices(merged);
+      }
       // Only refetch when something price-affecting changed
       const needsRefetch =
         merged.currency !== settings.currency ||

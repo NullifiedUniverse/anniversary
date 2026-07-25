@@ -101,6 +101,7 @@ export const DEFAULT_SETTINGS = {
   portfolio:        [],
   gasTrackerEnabled: true,
   compactMode:      false,
+  badgeEnabled:     true,
 };
 
 export const CURRENCIES = [

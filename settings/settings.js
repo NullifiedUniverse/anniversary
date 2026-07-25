@@ -61,9 +61,11 @@ async function load() {
   $('tooltipDelay').value = settings.tooltipDelay ?? 400;
   $('refreshInterval').value = String(settings.refreshInterval || 60);
   $('gasTrackerEnabled').checked = settings.gasTrackerEnabled !== false;
+  $('badgeEnabled').checked = settings.badgeEnabled !== false;
   $('compactMode').checked = !!settings.compactMode;
   $('alertsEnabled').checked = settings.alertsEnabled !== false;
-  $('alertCurSym').textContent = settings.currencySymbol || '$';
+  const curSymEl = $('alertCurSym');
+  if (curSymEl) curSymEl.textContent = settings.currencySymbol || '$';
   updateTooltipSub();
 
   if (settings.alerts?.some(a => a.triggered === true && a.lastFiredAt == null)) {
@@ -95,8 +97,16 @@ $('tooltipEnabled').addEventListener('change', () => { save({ tooltipEnabled: $(
 $('tooltipDelay').addEventListener('change', () => save({ tooltipDelay: parseInt($('tooltipDelay').value) }));
 $('refreshInterval').addEventListener('change', () => save({ refreshInterval: parseInt($('refreshInterval').value) }));
 $('gasTrackerEnabled').addEventListener('change', () => save({ gasTrackerEnabled: $('gasTrackerEnabled').checked }));
+$('badgeEnabled').addEventListener('change', () => save({ badgeEnabled: $('badgeEnabled').checked }));
 $('compactMode').addEventListener('change', () => save({ compactMode: $('compactMode').checked }));
 $('alertsEnabled').addEventListener('change', () => save({ alertsEnabled: $('alertsEnabled').checked }));
+$('alertType').addEventListener('change', () => {
+  const isPct = ['chg_up', 'chg_down'].includes($('alertType').value);
+  $('alertTargetLabel').innerHTML = isPct
+    ? 'Threshold (%)'
+    : `Target Price (<span id="alertCurSym">${settings.currencySymbol || '$'}</span>)`;
+  $('alertPrice').placeholder = isPct ? 'e.g. 5' : '0.00';
+});
 
 // === WATCHLIST ===
 let wSearchTimer;
@@ -302,7 +312,7 @@ function renderAlerts() {
       <div class="s-item-info">
         <span class="s-item-label">${a.coinName || coinDisplayName(a.coinId)}</span>
         <span class="s-item-sub">
-          ${a.type === 'above' ? '↑ Above' : '↓ Below'} ${fmtPrice(a.price || 0, sym)}
+          ${a.type === 'chg_up' ? `↑ 24h move ≥ +${a.price}%` : a.type === 'chg_down' ? `↓ 24h move ≤ −${a.price}%` : `${a.type === 'above' ? '↑ Above' : '↓ Below'} ${fmtPrice(a.price || 0, sym)}`}
           &middot; <em>${repeatLabel}</em>
           &middot; ${firedLabel}
           ${isTriggeredOnce ? ' <span class="s-tag-triggered">Triggered</span>' : ''}
@@ -433,6 +443,14 @@ $('importFile').addEventListener('change', async e => {
   } catch {
     alert('Import failed — that file is not a valid CryptoLens backup.');
   }
+});
+
+$('resetBtn').addEventListener('click', async () => {
+  if (!confirm('Reset ALL settings, watchlist, portfolio and alerts to their defaults? Consider exporting a backup first.')) return;
+  settings = { ...DEFAULT_SETTINGS };
+  await sendMsg('SAVE_SETTINGS', settings);
+  await load();
+  showSaved();
 });
 
 load();

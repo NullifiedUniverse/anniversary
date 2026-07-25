@@ -116,6 +116,50 @@ document.querySelectorAll('.sort-btn').forEach(btn => {
   });
 });
 
+// ── Quick add (watchlist tab) ─────────────────────────────────────────────────
+let quickAddTimer;
+
+$('quickAddBtn').addEventListener('click', () => {
+  const panel = $('quickAddPanel');
+  panel.classList.toggle('hidden');
+  if (!panel.classList.contains('hidden')) $('quickAddSearch').focus();
+});
+
+$('quickAddSearch').addEventListener('input', e => {
+  clearTimeout(quickAddTimer);
+  const q = e.target.value.trim();
+  const dd = $('quickAddResults');
+  if (q.length < 2) { dd.classList.add('hidden'); return; }
+  quickAddTimer = setTimeout(async () => {
+    try {
+      const { coins } = await msg('SEARCH_COINS', { query: q });
+      if (!coins.length) { dd.classList.add('hidden'); return; }
+      const wlIds = new Set(settings.watchlist || []);
+      dd.innerHTML = coins.slice(0, 6).map(c => {
+        const inWl = wlIds.has(c.id);
+        return `<div class="dd-item${inWl ? ' dd-added' : ''}" data-id="${c.id}"><strong>${c.symbol}</strong> ${c.name}${inWl ? ' <span class="dd-check">✓</span>' : ''}</div>`;
+      }).join('');
+      dd.classList.remove('hidden');
+      dd.querySelectorAll('.dd-item:not(.dd-added)').forEach(item => {
+        item.addEventListener('click', async () => {
+          try {
+            const r = await msg('ADD_TO_WATCHLIST', { coinId: item.dataset.id });
+            if (r?.success) {
+              settings.watchlist = [...(settings.watchlist || []), item.dataset.id];
+              $('quickAddSearch').value = '';
+              dd.classList.add('hidden');
+              $('quickAddPanel').classList.add('hidden');
+              loadWatchlist();
+            } else if (r?.reason === 'full') {
+              item.innerHTML = '<strong>Watchlist full</strong> — max 20 coins';
+            }
+          } catch (_) {}
+        });
+      });
+    } catch { dd.classList.add('hidden'); }
+  }, 300);
+});
+
 function sortCoins(coins, sort) {
   const arr = [...coins];
   switch (sort) {
@@ -292,7 +336,7 @@ async function loadWatchlist() {
     watchlistCoins = coins;
     if (data.currencySymbol) settings.currencySymbol = data.currencySymbol;
     renderWatchlist();
-    lastUpdatedAt = Date.now();
+    lastUpdatedAt = data.fetchedAt || Date.now();
     renderUpdatedTs();
   } catch {
     $('watchlistList').innerHTML = `<div class="empty error">Failed to load prices</div>`;
@@ -321,7 +365,11 @@ async function loadPortfolio() {
   try {
     const data = await msg('GET_WATCHLIST');
     const priceMap = {};
-    (data.coins || []).forEach(c => { priceMap[c.id] = c.current_price; });
+    const changeMap = {};
+    (data.coins || []).forEach(c => {
+      priceMap[c.id] = c.current_price;
+      changeMap[c.id] = c.price_change_percentage_24h;
+    });
     const sym = (data.currencySymbol || settings.currencySymbol) || '$';
     const cur = data.currency || settings.currency || 'usd';
 
@@ -330,6 +378,7 @@ async function loadPortfolio() {
       try {
         const extra = await msg('GET_SIMPLE_PRICES', { coinIds: missingIds, currency: cur });
         Object.assign(priceMap, extra.priceMap || {});
+        Object.assign(changeMap, extra.changeMap || {});
       } catch (_) {}
     }
 
@@ -362,8 +411,26 @@ async function loadPortfolio() {
     $('portfolioSummary').classList.remove('hidden');
     $('portfolioTotal').textContent = fmtBig(totalVal, sym);
     const pnlEl = $('portfolioPnl');
-    pnlEl.textContent = `${totalPnl >= 0 ? '+' : ''}${fmtBig(Math.abs(totalPnl), sym)} (${totalPct.toFixed(1)}%)`;
+    pnlEl.textContent = `${totalPnl >= 0 ? '+' : '-'}${fmtBig(Math.abs(totalPnl), sym)} (${totalPct.toFixed(1)}%)`;
     pnlEl.className = `ps-value ${totalPnl >= 0 ? 'up' : 'down'}`;
+
+    let dayPnl = 0, dayBase = 0;
+    portfolio.forEach(h => {
+      const price = priceMap[h.coinId];
+      const pct = changeMap[h.coinId];
+      if (price != null && pct != null && isFinite(pct) && pct > -100) {
+        const val = h.amount * price;
+        const prev = val / (1 + pct / 100);
+        dayPnl += val - prev;
+        dayBase += prev;
+      }
+    });
+    const dayEl = $('portfolioDay');
+    if (dayEl) {
+      const dayPct = dayBase > 0 ? (dayPnl / dayBase) * 100 : 0;
+      dayEl.textContent = `${dayPnl >= 0 ? '+' : '-'}${fmtBig(Math.abs(dayPnl), sym)} (${dayPct >= 0 ? '+' : ''}${dayPct.toFixed(1)}%)`;
+      dayEl.className = `ps-value ${dayPnl >= 0 ? 'up' : 'down'}`;
+    }
 
     const allocEl = $('allocBar');
     if (allocEl) {
@@ -575,7 +642,10 @@ function renderTrending(coins) {
           btn.classList.add('in-wl');
           btn.textContent = '✓';
           btn.title = 'In watchlist';
-          if (!r.alreadyIn) loadWatchlist();
+          if (!r.alreadyIn) {
+            settings.watchlist = [...(settings.watchlist || []), coinId];
+            loadWatchlist();
+          }
         } else if (r?.reason === 'full') {
           btn.textContent = '!';
           btn.title = 'Watchlist is full (max 20 coins)';
@@ -718,15 +788,22 @@ document.addEventListener('click', e => {
   if (!e.target.closest('#holdingCoinSearch') && !e.target.closest('#holdingSearchResults')) {
     $('holdingSearchResults').classList.add('hidden');
   }
+  if (!e.target.closest('#quickAddPanel') && !e.target.closest('#quickAddBtn')) {
+    $('quickAddResults').classList.add('hidden');
+  }
 });
 
 function renderUpdatedTs() {
   if (!lastUpdatedAt) return;
+  const el = $('lastUpdated');
   const secs = Math.max(0, Math.round((Date.now() - lastUpdatedAt) / 1000));
-  $('lastUpdated').textContent =
+  const stale = secs > 300;
+  const label =
     secs < 5 ? 'Updated just now'
     : secs < 60 ? `Updated ${secs}s ago`
     : `Updated ${Math.floor(secs / 60)}m ago`;
+  el.textContent = stale ? `⚠ ${label} — prices may be outdated` : label;
+  el.classList.toggle('stale', stale);
 }
 setInterval(renderUpdatedTs, 5_000);
 
