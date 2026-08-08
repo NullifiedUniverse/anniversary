@@ -1,4 +1,21 @@
-import { DEFAULT_SETTINGS } from '../shared/constants.js';
+import { DEFAULT_SETTINGS, COIN_MAP } from '../shared/constants.js';
+
+const _idNameMap = {};
+for (const entry of Object.values(COIN_MAP)) {
+  if (entry && entry.id && entry.name && !_idNameMap[entry.id]) _idNameMap[entry.id] = entry.name;
+}
+function coinDisplayName(id) {
+  return _idNameMap[id] || id.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
+function fmtPrice(p, sym) {
+  sym = sym || '$';
+  if (p === null || p === undefined || isNaN(p)) return sym + '—';
+  if (p >= 1000) return sym + p.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  if (p >= 1) return sym + p.toFixed(2);
+  if (p >= 0.001) return sym + p.toFixed(4);
+  return sym + p.toFixed(8);
+}
 
 let settings = { ...DEFAULT_SETTINGS };
 const $ = id => document.getElementById(id);
@@ -44,10 +61,24 @@ async function load() {
   $('tooltipDelay').value = settings.tooltipDelay ?? 400;
   $('refreshInterval').value = String(settings.refreshInterval || 60);
   $('gasTrackerEnabled').checked = settings.gasTrackerEnabled !== false;
+  $('badgeEnabled').checked = settings.badgeEnabled !== false;
   $('compactMode').checked = !!settings.compactMode;
   $('alertsEnabled').checked = settings.alertsEnabled !== false;
-  $('alertCurSym').textContent = settings.currencySymbol || '$';
+  const curSymEl = $('alertCurSym');
+  if (curSymEl) curSymEl.textContent = settings.currencySymbol || '$';
   updateTooltipSub();
+
+  if (settings.alerts?.some(a => a.triggered === true && a.lastFiredAt == null)) {
+    settings.alerts = settings.alerts.map(a => {
+      if (a.triggered === true && a.lastFiredAt == null) {
+        const { triggered: _t, ...rest } = a;
+        return { ...rest, repeatMode: rest.repeatMode || 'once', lastFiredAt: Date.now() };
+      }
+      return a;
+    });
+    try { await sendMsg('SAVE_SETTINGS', settings); } catch {}
+  }
+
   renderWatchlist();
   renderPortfolio();
   renderAlerts();
@@ -59,15 +90,23 @@ function updateTooltipSub() {
 
 // General bindings
 $('currency').addEventListener('change', () => {
-  const map = { usd:'$', eur:'€', gbp:'£', jpy:'¥', aud:'A$', cad:'C$', chf:'Fr', btc:'₿', eth:'Ξ' };
+  const map = { usd:'$', eur:'€', gbp:'£', jpy:'¥', aud:'A$', cad:'C$', chf:'Fr', cny:'¥', btc:'₿', eth:'Ξ' };
   save({ currency: $('currency').value, currencySymbol: map[$('currency').value] || '$' });
 });
 $('tooltipEnabled').addEventListener('change', () => { save({ tooltipEnabled: $('tooltipEnabled').checked }); updateTooltipSub(); });
 $('tooltipDelay').addEventListener('change', () => save({ tooltipDelay: parseInt($('tooltipDelay').value) }));
 $('refreshInterval').addEventListener('change', () => save({ refreshInterval: parseInt($('refreshInterval').value) }));
 $('gasTrackerEnabled').addEventListener('change', () => save({ gasTrackerEnabled: $('gasTrackerEnabled').checked }));
+$('badgeEnabled').addEventListener('change', () => save({ badgeEnabled: $('badgeEnabled').checked }));
 $('compactMode').addEventListener('change', () => save({ compactMode: $('compactMode').checked }));
 $('alertsEnabled').addEventListener('change', () => save({ alertsEnabled: $('alertsEnabled').checked }));
+$('alertType').addEventListener('change', () => {
+  const isPct = ['chg_up', 'chg_down'].includes($('alertType').value);
+  $('alertTargetLabel').innerHTML = isPct
+    ? 'Threshold (%)'
+    : `Target Price (<span id="alertCurSym">${settings.currencySymbol || '$'}</span>)`;
+  $('alertPrice').placeholder = isPct ? 'e.g. 5' : '0.00';
+});
 
 // === WATCHLIST ===
 let wSearchTimer;
@@ -80,15 +119,50 @@ function renderWatchlist() {
     el.innerHTML = `<div class="s-empty">Your watchlist is empty. Search above to add coins.</div>`;
     return;
   }
-  el.innerHTML = list.map((id) => `
-    <div class="s-list-item" data-id="${id}">
-      <span class="s-drag-handle">☰</span>
-      <span class="s-item-label">${id.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</span>
+  el.innerHTML = list.map((id, idx) => `
+    <div class="s-list-item" data-id="${id}" data-idx="${idx}" draggable="true">
+      <span class="s-drag-handle">&#9776;</span>
+      <span class="s-item-label">${coinDisplayName(id)}</span>
       <button class="s-remove-btn" data-id="${id}" title="Remove">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
       </button>
     </div>
   `).join('');
+
+  let dragSrcIdx = null;
+
+  el.querySelectorAll('.s-list-item').forEach(item => {
+    item.addEventListener('dragstart', e => {
+      dragSrcIdx = parseInt(item.dataset.idx);
+      item.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    item.addEventListener('dragend', () => {
+      item.classList.remove('dragging');
+      el.querySelectorAll('.s-list-item').forEach(i => i.classList.remove('drag-over'));
+    });
+    item.addEventListener('dragover', e => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      el.querySelectorAll('.s-list-item').forEach(i => i.classList.remove('drag-over'));
+      if (parseInt(item.dataset.idx) !== dragSrcIdx) item.classList.add('drag-over');
+    });
+    item.addEventListener('dragleave', () => item.classList.remove('drag-over'));
+    item.addEventListener('drop', e => {
+      e.preventDefault();
+      item.classList.remove('drag-over');
+      const dstIdx = parseInt(item.dataset.idx);
+      if (dragSrcIdx === null || dragSrcIdx === dstIdx) return;
+      const newList = [...(settings.watchlist || [])];
+      const [moved] = newList.splice(dragSrcIdx, 1);
+      newList.splice(dstIdx, 0, moved);
+      settings.watchlist = newList;
+      save({ watchlist: newList });
+      dragSrcIdx = null;
+      renderWatchlist();
+    });
+  });
+
   el.querySelectorAll('.s-remove-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       settings.watchlist = (settings.watchlist || []).filter(id => id !== btn.dataset.id);
@@ -121,16 +195,20 @@ $('coinSearch').addEventListener('input', e => {
         btn.addEventListener('click', () => {
           const item = btn.closest('.s-sr-item');
           const id = item.dataset.id;
-          if (!(settings.watchlist || []).includes(id) && (settings.watchlist || []).length < 20) {
-            settings.watchlist = [...(settings.watchlist || []), id];
-            save({ watchlist: settings.watchlist });
-            renderWatchlist();
-            $('coinSearch').value = '';
-            el.classList.add('hidden');
+          if ((settings.watchlist || []).includes(id)) return;
+          if ((settings.watchlist || []).length >= 20) {
+            btn.textContent = 'List full (20)';
+            setTimeout(() => { btn.textContent = '+ Add'; }, 2000);
+            return;
           }
+          settings.watchlist = [...(settings.watchlist || []), id];
+          save({ watchlist: settings.watchlist });
+          renderWatchlist();
+          $('coinSearch').value = '';
+          el.classList.add('hidden');
         });
       });
-    } catch {}
+    } catch { el.classList.add('hidden'); }
   }, 300);
 });
 
@@ -150,11 +228,12 @@ function renderPortfolio() {
     el.innerHTML = `<div class="s-empty">No holdings yet. Click below to add your first position.</div>`;
     return;
   }
+  const sym = settings.currencySymbol || '$';
   el.innerHTML = list.map((h, i) => `
     <div class="s-list-item">
       <div class="s-item-info">
-        <span class="s-item-label">${h.coinName || h.coinId}</span>
-        <span class="s-item-sub">${h.amount} ${(h.coinSymbol || '').toUpperCase()} · avg $${(h.avgBuyPrice || 0).toLocaleString()}</span>
+        <span class="s-item-label">${h.coinName || coinDisplayName(h.coinId)}</span>
+        <span class="s-item-sub">${h.amount} ${(h.coinSymbol || '').toUpperCase()}${h.avgBuyPrice ? ` &middot; avg ${fmtPrice(h.avgBuyPrice, sym)}` : ''}</span>
       </div>
       <button class="s-remove-btn" data-idx="${i}" title="Remove">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
@@ -179,16 +258,18 @@ $('pCoinSearch').addEventListener('input', e => {
   const el = $('pSearchResults');
   if (q.length < 2) { el.classList.add('hidden'); return; }
   pTimer = setTimeout(async () => {
-    const { coins } = await sendMsg('SEARCH_COINS', { query: q });
-    el.innerHTML = coins.slice(0, 6).map(c => `<div class="s-dd-item" data-id="${c.id}" data-sym="${c.symbol}" data-name="${c.name}"><strong>${c.symbol.toUpperCase()}</strong> ${c.name}</div>`).join('');
-    el.classList.toggle('hidden', !coins.length);
-    el.querySelectorAll('.s-dd-item').forEach(item => {
-      item.addEventListener('click', () => {
-        pSelected = { id: item.dataset.id, symbol: item.dataset.sym, name: item.dataset.name };
-        $('pCoinSearch').value = `${item.dataset.sym.toUpperCase()} — ${item.dataset.name}`;
-        el.classList.add('hidden');
+    try {
+      const { coins } = await sendMsg('SEARCH_COINS', { query: q });
+      el.innerHTML = coins.slice(0, 6).map(c => `<div class="s-dd-item" data-id="${c.id}" data-sym="${c.symbol}" data-name="${c.name}"><strong>${c.symbol.toUpperCase()}</strong> ${c.name}</div>`).join('');
+      el.classList.toggle('hidden', !coins.length);
+      el.querySelectorAll('.s-dd-item').forEach(item => {
+        item.addEventListener('click', () => {
+          pSelected = { id: item.dataset.id, symbol: item.dataset.sym, name: item.dataset.name };
+          $('pCoinSearch').value = `${item.dataset.sym.toUpperCase()} — ${item.dataset.name}`;
+          el.classList.add('hidden');
+        });
       });
-    });
+    } catch { el.classList.add('hidden'); }
   }, 300);
 });
 
@@ -217,22 +298,49 @@ function renderAlerts() {
     el.innerHTML = `<div class="s-empty">No alerts set.</div>`;
     return;
   }
-  el.innerHTML = list.map((a, i) => `
-    <div class="s-list-item ${a.triggered ? 'triggered' : ''}">
+  const sym = settings.currencySymbol || '$';
+  el.innerHTML = list.map((a, i) => {
+    const repeatMode = a.repeatMode || 'once';
+    const lastFiredAt = a.lastFiredAt || (a.triggered ? Date.now() - 5 * 60_000 : 0);
+    const fired = lastFiredAt > 0;
+    const minsAgo = fired ? Math.round((Date.now() - lastFiredAt) / 60_000) : 0;
+    const firedLabel = fired ? (minsAgo < 1 ? 'just now' : `${minsAgo}m ago`) : 'never fired';
+    const repeatLabel = repeatMode === 'once' ? 'one-shot' : `repeat ${repeatMode}`;
+    const isTriggeredOnce = repeatMode === 'once' && fired;
+    return `
+    <div class="s-list-item${isTriggeredOnce ? ' triggered' : ''}">
       <div class="s-item-info">
-        <span class="s-item-label">${a.coinName || a.coinId}</span>
-        <span class="s-item-sub">${a.type === 'above' ? '↑ Above' : '↓ Below'} $${(a.price || 0).toLocaleString()} ${a.triggered ? '<span class="s-tag-triggered">Triggered</span>' : ''}</span>
+        <span class="s-item-label">${a.coinName || coinDisplayName(a.coinId)}</span>
+        <span class="s-item-sub">
+          ${a.type === 'chg_up' ? `↑ 24h move ≥ +${a.price}%` : a.type === 'chg_down' ? `↓ 24h move ≤ −${a.price}%` : `${a.type === 'above' ? '↑ Above' : '↓ Below'} ${fmtPrice(a.price || 0, sym)}`}
+          &middot; <em>${repeatLabel}</em>
+          &middot; ${firedLabel}
+          ${isTriggeredOnce ? ' <span class="s-tag-triggered">Triggered</span>' : ''}
+        </span>
       </div>
+      ${isTriggeredOnce ? `<button class="s-reset-btn" data-idx="${i}" title="Re-arm this alert">↺ Reset</button>` : ''}
       <button class="s-remove-btn" data-idx="${i}" title="Remove">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
       </button>
     </div>
-  `).join('');
+    `;
+  }).join('');
   el.querySelectorAll('.s-remove-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       settings.alerts = (settings.alerts || []).filter((_, i) => i !== parseInt(btn.dataset.idx));
       save({ alerts: settings.alerts });
       renderAlerts();
+    });
+  });
+  el.querySelectorAll('.s-reset-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.dataset.idx);
+      if (settings.alerts[idx]) {
+        const { triggered: _t, ...rest } = settings.alerts[idx];
+        settings.alerts[idx] = { ...rest, lastFiredAt: 0 };
+        save({ alerts: settings.alerts });
+        renderAlerts();
+      }
     });
   });
 }
@@ -243,16 +351,18 @@ $('alertCoinSearch').addEventListener('input', e => {
   const el = $('alertSearchResults');
   if (q.length < 2) { el.classList.add('hidden'); return; }
   aTimer = setTimeout(async () => {
-    const { coins } = await sendMsg('SEARCH_COINS', { query: q });
-    el.innerHTML = coins.slice(0, 6).map(c => `<div class="s-dd-item" data-id="${c.id}" data-sym="${c.symbol}" data-name="${c.name}"><strong>${c.symbol.toUpperCase()}</strong> ${c.name}</div>`).join('');
-    el.classList.toggle('hidden', !coins.length);
-    el.querySelectorAll('.s-dd-item').forEach(item => {
-      item.addEventListener('click', () => {
-        aSelected = { id: item.dataset.id, symbol: item.dataset.sym, name: item.dataset.name };
-        $('alertCoinSearch').value = `${item.dataset.sym.toUpperCase()} — ${item.dataset.name}`;
-        el.classList.add('hidden');
+    try {
+      const { coins } = await sendMsg('SEARCH_COINS', { query: q });
+      el.innerHTML = coins.slice(0, 6).map(c => `<div class="s-dd-item" data-id="${c.id}" data-sym="${c.symbol}" data-name="${c.name}"><strong>${c.symbol.toUpperCase()}</strong> ${c.name}</div>`).join('');
+      el.classList.toggle('hidden', !coins.length);
+      el.querySelectorAll('.s-dd-item').forEach(item => {
+        item.addEventListener('click', () => {
+          aSelected = { id: item.dataset.id, symbol: item.dataset.sym, name: item.dataset.name };
+          $('alertCoinSearch').value = `${item.dataset.sym.toUpperCase()} — ${item.dataset.name}`;
+          el.classList.add('hidden');
+        });
       });
-    });
+    } catch { el.classList.add('hidden'); }
   }, 300);
 });
 
@@ -260,15 +370,87 @@ $('saveAlertBtn').addEventListener('click', async () => {
   if (!aSelected) return;
   const price = parseFloat($('alertPrice').value);
   if (!price || isNaN(price)) return;
+  const type = $('alertType').value;
+  const isDupe = (settings.alerts || []).some(
+    a => a.coinId === aSelected.id && a.type === type && Math.abs(a.price - price) < 0.0001
+  );
+  if (isDupe) {
+    const btn = $('saveAlertBtn');
+    const orig = btn.textContent;
+    btn.textContent = 'Already exists!';
+    setTimeout(() => { btn.textContent = orig; }, 2000);
+    return;
+  }
   const list = [...(settings.alerts || []), {
     coinId: aSelected.id, coinSymbol: aSelected.symbol, coinName: aSelected.name,
-    type: $('alertType').value, price, triggered: false,
+    type, price,
+    repeatMode: $('alertRepeatMode').value || 'once',
+    lastFiredAt: 0,
   }];
   settings.alerts = list;
   await save({ alerts: list });
   aSelected = null;
-  $('alertCoinSearch').value = ''; $('alertPrice').value = '';
+  $('alertCoinSearch').value = ''; $('alertPrice').value = ''; $('alertRepeatMode').value = 'once';
   renderAlerts();
+});
+
+// === BACKUP & RESTORE ===
+$('exportBtn').addEventListener('click', () => {
+  const payload = {
+    app: 'CryptoLens',
+    format: 1,
+    exportedAt: new Date().toISOString(),
+    settings,
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `cryptolens-backup-${new Date().toISOString().slice(0, 10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+$('importBtn').addEventListener('click', () => $('importFile').click());
+
+$('importFile').addEventListener('change', async e => {
+  const file = e.target.files[0];
+  e.target.value = '';
+  if (!file) return;
+  try {
+    const data = JSON.parse(await file.text());
+    const s = data.settings || data;
+    if (!s || typeof s !== 'object' || !Array.isArray(s.watchlist)) {
+      throw new Error('not a CryptoLens backup');
+    }
+    if (!confirm('Replace your current watchlist, portfolio, alerts and preferences with this backup?')) return;
+    // Only accept known keys, and sanitize the collection fields
+    const clean = {};
+    for (const k of Object.keys(DEFAULT_SETTINGS)) {
+      if (k in s) clean[k] = s[k];
+    }
+    clean.watchlist = (clean.watchlist || []).filter(x => typeof x === 'string').slice(0, 20);
+    clean.portfolio = Array.isArray(clean.portfolio)
+      ? clean.portfolio.filter(h => h && typeof h.coinId === 'string' && typeof h.amount === 'number')
+      : [];
+    clean.alerts = Array.isArray(clean.alerts)
+      ? clean.alerts.filter(a => a && typeof a.coinId === 'string' && typeof a.price === 'number')
+      : [];
+    settings = { ...DEFAULT_SETTINGS, ...clean };
+    await sendMsg('SAVE_SETTINGS', settings);
+    await load();
+    showSaved();
+  } catch {
+    alert('Import failed — that file is not a valid CryptoLens backup.');
+  }
+});
+
+$('resetBtn').addEventListener('click', async () => {
+  if (!confirm('Reset ALL settings, watchlist, portfolio and alerts to their defaults? Consider exporting a backup first.')) return;
+  settings = { ...DEFAULT_SETTINGS };
+  await sendMsg('SAVE_SETTINGS', settings);
+  await load();
+  showSaved();
 });
 
 load();

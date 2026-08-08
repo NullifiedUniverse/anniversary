@@ -45,7 +45,7 @@
           <div class="s-card-header">Display Currency</div>
           <div class="s-card-body">
             <p class="s-desc">All prices and portfolio values are displayed in this currency.</p>
-            <select id="currency" class="s-select"><option value="usd">USD &mdash; US Dollar ($)</option><option value="eur">EUR &mdash; Euro (&euro;)</option><option value="gbp">GBP &mdash; British Pound (&pound;)</option><option value="jpy">JPY &mdash; Japanese Yen (&yen;)</option><option value="aud">AUD &mdash; Australian Dollar (A$)</option><option value="cad">CAD &mdash; Canadian Dollar (C$)</option><option value="chf">CHF &mdash; Swiss Franc (Fr)</option><option value="btc">BTC &mdash; Bitcoin (&#x20BF;)</option><option value="eth">ETH &mdash; Ethereum (&Xi;)</option></select>
+            <select id="currency" class="s-select"><option value="usd">USD &mdash; US Dollar ($)</option><option value="eur">EUR &mdash; Euro (&euro;)</option><option value="gbp">GBP &mdash; British Pound (&pound;)</option><option value="jpy">JPY &mdash; Japanese Yen (&yen;)</option><option value="aud">AUD &mdash; Australian Dollar (A$)</option><option value="cad">CAD &mdash; Canadian Dollar (C$)</option><option value="chf">CHF &mdash; Swiss Franc (Fr)</option><option value="cny">CNY &mdash; Chinese Yuan (&#165;)</option><option value="btc">BTC &mdash; Bitcoin (&#x20BF;)</option><option value="eth">ETH &mdash; Ethereum (&Xi;)</option></select>
           </div>
         </div>
         <div class="s-card">
@@ -61,8 +61,24 @@
           <div class="s-card-body"><label class="s-field-row"><span>Refresh prices every</span><select id="refreshInterval" class="s-select-sm"><option value="30">30 seconds</option><option value="60">1 minute</option><option value="120">2 minutes</option><option value="300">5 minutes</option></select></label></div>
         </div>
         <div class="s-card">
+          <div class="s-card-header">Toolbar Badge</div>
+          <div class="s-card-body"><label class="s-toggle-row"><span><strong>Show live price on the toolbar icon</strong><small>Displays Bitcoin (or your first watchlist coin) under the icon</small></span><label class="toggle"><input type="checkbox" id="badgeEnabled"><span class="toggle-track"></span></label></label></div>
+        </div>
+        <div class="s-card">
           <div class="s-card-header">ETH Gas Tracker</div>
           <div class="s-card-body"><label class="s-toggle-row"><span><strong>Show gas tracker in Market tab</strong><small>Displays Slow / Standard / Fast fees in Gwei</small></span><label class="toggle"><input type="checkbox" id="gasTrackerEnabled"><span class="toggle-track"></span></label></label></div>
+        </div>
+        <div class="s-card">
+          <div class="s-card-header">Backup &amp; Restore</div>
+          <div class="s-card-body">
+            <p class="s-desc">Export your watchlist, portfolio, alerts and preferences to a JSON file &mdash; or restore everything from a previous backup.</p>
+            <div class="s-form-actions">
+              <button id="exportBtn" class="s-btn-secondary">Export Data</button>
+              <button id="importBtn" class="s-btn-ghost">Import Backup</button>
+              <button id="resetBtn" class="s-btn-danger">Reset All</button>
+              <input type="file" id="importFile" accept=".json,application/json" class="hidden">
+            </div>
+          </div>
         </div>
       </section>
 
@@ -102,10 +118,11 @@
         <div class="s-card">
           <div class="s-card-header">Add Alert</div>
           <div class="s-card-body">
-            <div class="s-form-grid">
+            <div class="s-form-grid s-form-grid-2">
               <div class="s-form-group"><label>Coin</label><div class="s-search-wrap"><input type="text" id="alertCoinSearch" class="s-input" placeholder="Search coins&hellip;" autocomplete="off"><div id="alertSearchResults" class="s-search-dropdown hidden"></div></div></div>
-              <div class="s-form-group"><label>Condition</label><select id="alertType" class="s-select"><option value="above">Price goes above &uarr;</option><option value="below">Price drops below &darr;</option></select></div>
-              <div class="s-form-group"><label>Target Price (<span id="alertCurSym">$</span>)</label><input type="number" id="alertPrice" class="s-input" placeholder="0.00" step="any" min="0"></div>
+              <div class="s-form-group"><label>Condition</label><select id="alertType" class="s-select"><option value="above">Price goes above &uarr;</option><option value="below">Price drops below &darr;</option><option value="chg_up">24h change rises past +X%</option><option value="chg_down">24h change falls past &minus;X%</option></select></div>
+              <div class="s-form-group"><label id="alertTargetLabel">Target Price (<span id="alertCurSym">$</span>)</label><input type="number" id="alertPrice" class="s-input" placeholder="0.00" step="any" min="0"></div>
+              <div class="s-form-group"><label>Alert Mode</label><select id="alertRepeatMode" class="s-select"><option value="once">One-shot (then reset)</option><option value="5m">Repeat every 5 min</option><option value="15m">Repeat every 15 min</option><option value="30m">Repeat every 30 min</option><option value="60m">Repeat every hour</option></select></div>
             </div>
             <button id="saveAlertBtn" class="s-btn-primary">Add Alert</button>
           </div>
@@ -121,9 +138,9 @@
         <h2>About</h2>
         <div class="about-card">
           <div class="about-logo"><svg width="60" height="60" viewBox="0 0 24 24" fill="none"><rect width="24" height="24" rx="7" fill="#f7931a"/><path d="M7 16l3-6 3 4 2-3 2 5" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-          <h3>CryptoLens <span class="version">v1.0.0</span></h3>
+          <h3>CryptoLens <span class="version">v1.3.0</span></h3>
           <p>A quality-of-life Chrome extension for crypto traders and enthusiasts. Get real-time price data on any webpage, track your portfolio, and stay on top of the market &mdash; without leaving your current tab.</p>
-          <div class="feature-list"><div class="feature-item"><span class="fi-dot"></span>Instant price tooltip on any selected ticker</div><div class="feature-item"><span class="fi-dot"></span>Watchlist with 7-day sparklines</div><div class="feature-item"><span class="fi-dot"></span>Portfolio tracker with real-time P&amp;L</div><div class="feature-item"><span class="fi-dot"></span>Fear &amp; Greed Index</div><div class="feature-item"><span class="fi-dot"></span>ETH Gas tracker (Slow/Std/Fast)</div><div class="feature-item"><span class="fi-dot"></span>Price alerts via browser notifications</div></div>
+          <div class="feature-list"><div class="feature-item"><span class="fi-dot"></span>Instant price tooltip on any selected ticker</div><div class="feature-item"><span class="fi-dot"></span>Watchlist with 7-day sparklines</div><div class="feature-item"><span class="fi-dot"></span>Portfolio tracker with real-time P&amp;L</div><div class="feature-item"><span class="fi-dot"></span>Fear &amp; Greed Index</div><div class="feature-item"><span class="fi-dot"></span>ETH Gas tracker (Slow/Std/Fast)</div><div class="feature-item"><span class="fi-dot"></span>Price &amp; 24h-move alerts, one-shot or repeating</div><div class="feature-item"><span class="fi-dot"></span>Set alerts right from the popup</div><div class="feature-item"><span class="fi-dot"></span>Backup export &amp; import</div></div>
           <div class="about-footer">Data by <strong>CoinGecko</strong> (free API) &middot; Fear &amp; Greed by <strong>Alternative.me</strong> &middot; All data stored locally on your device</div>
         </div>
       </section>

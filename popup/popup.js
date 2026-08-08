@@ -1,9 +1,19 @@
-import { DEFAULT_SETTINGS } from '../shared/constants.js';
+import { DEFAULT_SETTINGS, COIN_COLORS } from '../shared/constants.js';
+
+const STABLECOINS = new Set(['tether', 'usd-coin', 'dai', 'binance-usd']);
 
 let settings = { ...DEFAULT_SETTINGS };
 let watchlistCoins = [];
 let watchlistSort = 'default';
 let expandedCoinId = null;
+let marketLoadedAt = 0;
+let prevPrices = {};
+let flashMap = {};
+let lastUpdatedAt = 0;
+let _staggerDone = false;
+let _lastExpandedId = null;
+
+const FALLBACK_COLORS = ['#f7931a', '#627eea', '#00d26a', '#9945ff', '#ff4d4d', '#12aaff'];
 
 const $ = id => document.getElementById(id);
 
@@ -34,17 +44,15 @@ function fmtBig(n, sym) {
   return sym + n.toLocaleString();
 }
 
-const COLORS = {
-  bitcoin:'#f7931a',ethereum:'#627eea',solana:'#9945ff',binancecoin:'#f3ba2f',
-  ripple:'#346aa9',cardano:'#0033ad',dogecoin:'#c2a633','the-open-network':'#0088cc',
-  'avalanche-2':'#e84142',chainlink:'#2a5ada',polkadot:'#e6007a',
-  'bitcoin-cash':'#8dc351',near:'#00c1de','matic-network':'#8247e5',
-  litecoin:'#8c8c8c',uniswap:'#ff007a',cosmos:'#6f7390',stellar:'#7d00ff',
-  optimism:'#ff0420',arbitrum:'#12aaff',monero:'#ff6600',tron:'#ff0013',
-};
+function roundForInput(p) {
+  if (p === null || p === undefined || isNaN(p)) return '';
+  if (p >= 1000) return Math.round(p);
+  if (p >= 1) return parseFloat(p.toFixed(2));
+  return parseFloat(p.toPrecision(4));
+}
 
 function avatar(coin) {
-  const bg = COLORS[coin.id] || '#475569';
+  const bg = COIN_COLORS[coin.id] || '#475569';
   const letter = (coin.symbol || coin.name || '?')[0].toUpperCase();
   return `<div class="coin-av" style="background:${bg}">${letter}</div>`;
 }
@@ -72,7 +80,7 @@ function miniSpark(prices, isUp) {
   return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 }
 
-function sparkLarge(prices, isUp) {
+function sparkLarge(prices, isUp, animate) {
   if (!prices?.length) return '';
   const W = 326, H = 52;
   const sample = prices.filter((_, i) => i % Math.ceil(prices.length / 80) === 0);
@@ -92,19 +100,64 @@ function sparkLarge(prices, isUp) {
       <stop offset="0%" stop-color="${color}" stop-opacity="0.2"/>
       <stop offset="100%" stop-color="${color}" stop-opacity="0"/>
     </linearGradient></defs>
-    <polygon points="${fillPts}" fill="url(#sg${uid})"/>
-    <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <polygon points="${fillPts}" fill="url(#sg${uid})"${animate ? ' class="spark-fill"' : ''}/>
+    <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" pathLength="1"${animate ? ' class="spark-draw"' : ''}/>
   </svg>`;
 }
 
-// ── Sort ────────────────────────────────────────────────────────────
+// ── Sort ──────────────────────────────────────────────────────────────────────
 document.querySelectorAll('.sort-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     watchlistSort = btn.dataset.sort;
+    chrome.storage.local.set({ watchlistSort });
     renderWatchlist();
   });
+});
+
+// ── Quick add (watchlist tab) ─────────────────────────────────────────────────
+let quickAddTimer;
+
+$('quickAddBtn').addEventListener('click', () => {
+  const panel = $('quickAddPanel');
+  panel.classList.toggle('hidden');
+  if (!panel.classList.contains('hidden')) $('quickAddSearch').focus();
+});
+
+$('quickAddSearch').addEventListener('input', e => {
+  clearTimeout(quickAddTimer);
+  const q = e.target.value.trim();
+  const dd = $('quickAddResults');
+  if (q.length < 2) { dd.classList.add('hidden'); return; }
+  quickAddTimer = setTimeout(async () => {
+    try {
+      const { coins } = await msg('SEARCH_COINS', { query: q });
+      if (!coins.length) { dd.classList.add('hidden'); return; }
+      const wlIds = new Set(settings.watchlist || []);
+      dd.innerHTML = coins.slice(0, 6).map(c => {
+        const inWl = wlIds.has(c.id);
+        return `<div class="dd-item${inWl ? ' dd-added' : ''}" data-id="${c.id}"><strong>${c.symbol}</strong> ${c.name}${inWl ? ' <span class="dd-check">✓</span>' : ''}</div>`;
+      }).join('');
+      dd.classList.remove('hidden');
+      dd.querySelectorAll('.dd-item:not(.dd-added)').forEach(item => {
+        item.addEventListener('click', async () => {
+          try {
+            const r = await msg('ADD_TO_WATCHLIST', { coinId: item.dataset.id });
+            if (r?.success) {
+              settings.watchlist = [...(settings.watchlist || []), item.dataset.id];
+              $('quickAddSearch').value = '';
+              dd.classList.add('hidden');
+              $('quickAddPanel').classList.add('hidden');
+              loadWatchlist();
+            } else if (r?.reason === 'full') {
+              item.innerHTML = '<strong>Watchlist full</strong> — max 20 coins';
+            }
+          } catch (_) {}
+        });
+      });
+    } catch { dd.classList.add('hidden'); }
+  }, 300);
 });
 
 function sortCoins(coins, sort) {
@@ -117,17 +170,37 @@ function sortCoins(coins, sort) {
   }
 }
 
-// ── Watchlist render ───────────────────────────────────────────────────
-function buildExpandPanel(coin) {
+// ── Watchlist render ──────────────────────────────────────────────────────────
+function buildExpandPanel(coin, animateChart) {
   const sp = coin.sparkline_in_7d?.price || [];
   const isUp = (coin.price_change_percentage_24h ?? 0) >= 0;
   const sym = coin.symbol.toUpperCase();
   const id = coin.id;
+  const isStable = STABLECOINS.has(id);
+  const priceStr = fmtPrice(coin.current_price, settings.currencySymbol || '$');
+  const exchangeLinks = isStable ? '' : `
+    <a href="https://www.binance.com/en/trade/${sym}_USDT" target="_blank" rel="noopener noreferrer" class="exch-pill">Binance ↗</a>
+    <a href="https://www.tradingview.com/chart/?symbol=BINANCE:${sym}USDT" target="_blank" rel="noopener noreferrer" class="exch-pill">TradingView ↗</a>
+  `;
   return `
-    <div class="expand-chart">${sparkLarge(sp, isUp)}</div>
+    <div class="expand-chart">${sparkLarge(sp, isUp, animateChart)}</div>
+    <div class="expand-actions">
+      <button class="copy-price-btn" data-price="${priceStr}">Copy price · ${priceStr}</button>
+      <button class="alert-btn" title="Set a price alert">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        Alert
+      </button>
+    </div>
+    <div class="alert-inline hidden">
+      <select class="ai-type">
+        <option value="above">Above ↑</option>
+        <option value="below">Below ↓</option>
+      </select>
+      <input type="number" class="ai-price" step="any" min="0" value="${roundForInput(coin.current_price)}" placeholder="Target price">
+      <button class="ai-save">Set alert</button>
+    </div>
     <div class="expand-links">
-      <a href="https://www.binance.com/en/trade/${sym}_USDT" target="_blank" rel="noopener noreferrer" class="exch-pill">Binance ↗</a>
-      <a href="https://www.tradingview.com/chart/?symbol=BINANCE:${sym}USDT" target="_blank" rel="noopener noreferrer" class="exch-pill">TradingView ↗</a>
+      ${exchangeLinks}
       <a href="https://www.coingecko.com/en/coins/${id}" target="_blank" rel="noopener noreferrer" class="exch-pill exch-cg">CoinGecko ↗</a>
     </div>
   `;
@@ -138,36 +211,54 @@ function renderWatchlist() {
   const sym = settings.currencySymbol || '$';
   const listEl = $('watchlistList');
 
+  // Draw the expand chart only when a panel is newly opened, and stagger
+  // rows only on the very first paint — re-renders stay motion-free
+  const animateChart = expandedCoinId !== _lastExpandedId;
+  _lastExpandedId = expandedCoinId;
+  const doStagger = !_staggerDone && coins.length > 0;
+
   if (!coins.length) {
-    listEl.innerHTML = `<div class="empty">Watchlist is empty.<br>Add coins in Settings.</div>`;
+    listEl.innerHTML = `
+      <div class="empty">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.45"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        <span>Your watchlist is empty</span>
+        <button class="empty-cta">+ Add coins</button>
+      </div>`;
+    listEl.querySelector('.empty-cta').addEventListener('click', () => chrome.runtime.openOptionsPage());
     return;
   }
 
   listEl.innerHTML = '';
 
-  coins.forEach(c => {
+  coins.forEach((c, i) => {
     const ch = c.price_change_percentage_24h;
     const sp = c.sparkline_in_7d?.price || [];
     const isUp = (ch ?? 0) >= 0;
     const isExpanded = expandedCoinId === c.id;
+    const hasAlert = (settings.alerts || []).some(a => a.coinId === c.id);
 
     const rowEl = document.createElement('div');
     rowEl.className = 'coin-row' + (isExpanded ? ' row-expanded' : '');
+    if (doStagger) {
+      rowEl.classList.add('row-enter');
+      rowEl.style.animationDelay = `${Math.min(i * 25, 250)}ms`;
+    }
     rowEl.innerHTML = `
       ${avatar(c)}
       <div class="coin-meta">
-        <span class="coin-name">${c.name}</span>
+        <span class="coin-name">${c.name}${hasAlert ? '<svg class="row-bell" width="9" height="9" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>' : ''}</span>
         <span class="coin-sym">${c.symbol.toUpperCase()}</span>
       </div>
       <div class="coin-spark">${miniSpark(sp, isUp)}</div>
       <div class="coin-price-col">
-        <span class="coin-price">${fmtPrice(c.current_price, sym)}</span>
+        <span class="coin-price${flashMap[c.id] ? ' flash-' + flashMap[c.id] : ''}">${fmtPrice(c.current_price, sym)}</span>
         ${changeBadge(ch)}
       </div>
       <svg class="row-chevron${isExpanded ? ' open' : ''}" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
     `;
     rowEl.addEventListener('click', () => {
       expandedCoinId = (expandedCoinId === c.id) ? null : c.id;
+      chrome.storage.local.set({ expandedCoinId });
       renderWatchlist();
     });
     listEl.appendChild(rowEl);
@@ -175,26 +266,84 @@ function renderWatchlist() {
     if (isExpanded) {
       const panelEl = document.createElement('div');
       panelEl.className = 'expand-panel';
-      panelEl.innerHTML = buildExpandPanel(c);
+      panelEl.innerHTML = buildExpandPanel(c, animateChart);
       panelEl.querySelectorAll('a').forEach(a => a.addEventListener('click', e => e.stopPropagation()));
+      const copyBtn = panelEl.querySelector('.copy-price-btn');
+      if (copyBtn) {
+        copyBtn.addEventListener('click', e => {
+          e.stopPropagation();
+          const price = copyBtn.dataset.price;
+          navigator.clipboard.writeText(price).then(() => {
+            const orig = copyBtn.textContent;
+            copyBtn.textContent = '✓ Copied!';
+            setTimeout(() => { copyBtn.textContent = orig; }, 1500);
+          }).catch(() => {});
+        });
+      }
+      const alertBtn = panelEl.querySelector('.alert-btn');
+      const alertForm = panelEl.querySelector('.alert-inline');
+      if (alertBtn && alertForm) {
+        alertBtn.addEventListener('click', e => {
+          e.stopPropagation();
+          alertForm.classList.toggle('hidden');
+          if (!alertForm.classList.contains('hidden')) alertForm.querySelector('.ai-price').focus();
+        });
+        alertForm.addEventListener('click', e => e.stopPropagation());
+        alertForm.querySelector('.ai-save').addEventListener('click', async e => {
+          e.stopPropagation();
+          const saveBtn = alertForm.querySelector('.ai-save');
+          const price = parseFloat(alertForm.querySelector('.ai-price').value);
+          const type = alertForm.querySelector('.ai-type').value;
+          if (!price || isNaN(price) || price <= 0) return;
+          const alerts = [...(settings.alerts || [])];
+          const dupe = alerts.some(a => a.coinId === c.id && a.type === type && Math.abs(a.price - price) < 1e-9);
+          if (dupe) {
+            saveBtn.textContent = 'Exists!';
+            setTimeout(() => { saveBtn.textContent = 'Set alert'; }, 1600);
+            return;
+          }
+          alerts.push({ coinId: c.id, coinSymbol: c.symbol, coinName: c.name, type, price, repeatMode: 'once', lastFiredAt: 0 });
+          try {
+            await msg('SAVE_SETTINGS', { alerts });
+            settings.alerts = alerts;
+            saveBtn.textContent = '✓ Set';
+            setTimeout(() => renderWatchlist(), 900);
+          } catch {
+            saveBtn.textContent = 'Failed';
+            setTimeout(() => { saveBtn.textContent = 'Set alert'; }, 1600);
+          }
+        });
+      }
       listEl.appendChild(panelEl);
     }
   });
+
+  if (doStagger) _staggerDone = true;
+  flashMap = {};
 }
 
 async function loadWatchlist() {
   try {
     const data = await msg('GET_WATCHLIST');
-    watchlistCoins = data.coins || [];
+    const coins = data.coins || [];
+    coins.forEach(c => {
+      const prev = prevPrices[c.id];
+      if (prev != null && c.current_price != null && c.current_price !== prev) {
+        flashMap[c.id] = c.current_price > prev ? 'up' : 'down';
+      }
+      prevPrices[c.id] = c.current_price;
+    });
+    watchlistCoins = coins;
     if (data.currencySymbol) settings.currencySymbol = data.currencySymbol;
     renderWatchlist();
-    $('lastUpdated').textContent = 'Updated ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    lastUpdatedAt = data.fetchedAt || Date.now();
+    renderUpdatedTs();
   } catch {
     $('watchlistList').innerHTML = `<div class="empty error">Failed to load prices</div>`;
   }
 }
 
-// ── Portfolio ─────────────────────────────────────────────────────────
+// ── Portfolio ─────────────────────────────────────────────────────────────────
 let selectedHoldingCoin = null;
 let holdingSearchTimer;
 
@@ -202,18 +351,40 @@ async function loadPortfolio() {
   const portfolio = settings.portfolio || [];
   const el = $('portfolioList');
   if (!portfolio.length) {
-    el.innerHTML = `<div class="empty">No holdings yet.</div>`;
+    el.innerHTML = `
+      <div class="empty">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.45"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+        <span>No holdings yet</span>
+        <button class="empty-cta">+ Add your first holding</button>
+      </div>`;
+    el.querySelector('.empty-cta').addEventListener('click', () => $('addHoldingBtn').click());
     $('portfolioSummary').classList.add('hidden');
     return;
   }
+  el.innerHTML = `<div class="loading-state"><div class="spinner"></div></div>`;
   try {
     const data = await msg('GET_WATCHLIST');
     const priceMap = {};
-    (data.coins || []).forEach(c => { priceMap[c.id] = c.current_price; });
-    const sym = settings.currencySymbol || '$';
+    const changeMap = {};
+    (data.coins || []).forEach(c => {
+      priceMap[c.id] = c.current_price;
+      changeMap[c.id] = c.price_change_percentage_24h;
+    });
+    const sym = (data.currencySymbol || settings.currencySymbol) || '$';
+    const cur = data.currency || settings.currency || 'usd';
+
+    const missingIds = portfolio.map(h => h.coinId).filter(id => !(id in priceMap));
+    if (missingIds.length) {
+      try {
+        const extra = await msg('GET_SIMPLE_PRICES', { coinIds: missingIds, currency: cur });
+        Object.assign(priceMap, extra.priceMap || {});
+        Object.assign(changeMap, extra.changeMap || {});
+      } catch (_) {}
+    }
+
     let totalVal = 0, totalCost = 0;
     const rows = portfolio.map(h => {
-      const price = priceMap[h.coinId] || 0;
+      const price = priceMap[h.coinId] ?? 0;
       const val = h.amount * price;
       const cost = h.amount * (h.avgBuyPrice || 0);
       const pnl = val - cost;
@@ -221,7 +392,7 @@ async function loadPortfolio() {
       totalVal += val; totalCost += cost;
       const cls = pnl >= 0 ? 'up' : 'down';
       const sign = pnl >= 0 ? '+' : '-';
-      return `<div class="coin-row portfolio-row" data-id="${h.coinId}">
+      return `<div class="coin-row portfolio-row" data-id="${h.coinId}" title="Click to edit">
         <div class="coin-meta">
           <span class="coin-name">${h.coinName || h.coinId}</span>
           <span class="coin-sym">${h.amount} ${(h.coinSymbol || '').toUpperCase()}</span>
@@ -240,11 +411,62 @@ async function loadPortfolio() {
     $('portfolioSummary').classList.remove('hidden');
     $('portfolioTotal').textContent = fmtBig(totalVal, sym);
     const pnlEl = $('portfolioPnl');
-    pnlEl.textContent = `${totalPnl >= 0 ? '+' : ''}${fmtBig(Math.abs(totalPnl), sym)} (${totalPct.toFixed(1)}%)`;
+    pnlEl.textContent = `${totalPnl >= 0 ? '+' : '-'}${fmtBig(Math.abs(totalPnl), sym)} (${totalPct.toFixed(1)}%)`;
     pnlEl.className = `ps-value ${totalPnl >= 0 ? 'up' : 'down'}`;
+
+    let dayPnl = 0, dayBase = 0;
+    portfolio.forEach(h => {
+      const price = priceMap[h.coinId];
+      const pct = changeMap[h.coinId];
+      if (price != null && pct != null && isFinite(pct) && pct > -100) {
+        const val = h.amount * price;
+        const prev = val / (1 + pct / 100);
+        dayPnl += val - prev;
+        dayBase += prev;
+      }
+    });
+    const dayEl = $('portfolioDay');
+    if (dayEl) {
+      const dayPct = dayBase > 0 ? (dayPnl / dayBase) * 100 : 0;
+      dayEl.textContent = `${dayPnl >= 0 ? '+' : '-'}${fmtBig(Math.abs(dayPnl), sym)} (${dayPct >= 0 ? '+' : ''}${dayPct.toFixed(1)}%)`;
+      dayEl.className = `ps-value ${dayPnl >= 0 ? 'up' : 'down'}`;
+    }
+
+    const allocEl = $('allocBar');
+    if (allocEl) {
+      if (totalVal > 0) {
+        const segs = portfolio
+          .map(h => ({ h, val: h.amount * (priceMap[h.coinId] ?? 0) }))
+          .filter(x => x.val > 0)
+          .sort((a, b) => b.val - a.val)
+          .map(({ h, val }, i) => {
+            const pct = (val / totalVal) * 100;
+            const color = COIN_COLORS[h.coinId] || FALLBACK_COLORS[i % FALLBACK_COLORS.length];
+            return `<div class="alloc-seg" style="width:${pct.toFixed(2)}%;background:${color}" title="${(h.coinSymbol || h.coinId).toUpperCase()} · ${pct.toFixed(1)}%"></div>`;
+          }).join('');
+        allocEl.innerHTML = `<div class="alloc-bar">${segs}</div>`;
+        allocEl.classList.remove('hidden');
+      } else {
+        allocEl.classList.add('hidden');
+      }
+    }
+
     el.innerHTML = rows.join('');
     el.querySelectorAll('.rm-holding').forEach(btn => {
       btn.addEventListener('click', e => { e.stopPropagation(); removeHolding(btn.dataset.id); });
+    });
+    el.querySelectorAll('.portfolio-row').forEach(row => {
+      row.addEventListener('click', () => {
+        const h = (settings.portfolio || []).find(x => x.coinId === row.dataset.id);
+        if (!h) return;
+        selectedHoldingCoin = { id: h.coinId, symbol: h.coinSymbol, name: h.coinName };
+        $('holdingCoinSearch').value = `${(h.coinSymbol || '').toUpperCase()} — ${h.coinName || h.coinId}`;
+        $('holdingAmount').value = h.amount;
+        $('holdingBuyPrice').value = h.avgBuyPrice || '';
+        $('holdingCurSym').textContent = settings.currencySymbol || '$';
+        $('saveHoldingBtn').textContent = 'Update Holding';
+        $('addHoldingForm').classList.remove('hidden');
+      });
     });
   } catch {
     el.innerHTML = `<div class="empty error">Failed to load portfolio</div>`;
@@ -263,19 +485,21 @@ $('holdingCoinSearch').addEventListener('input', e => {
   const dd = $('holdingSearchResults');
   if (q.length < 2) { dd.classList.add('hidden'); return; }
   holdingSearchTimer = setTimeout(async () => {
-    const { coins } = await msg('SEARCH_COINS', { query: q });
-    if (!coins.length) { dd.classList.add('hidden'); return; }
-    dd.innerHTML = coins.slice(0, 6).map(c =>
-      `<div class="dd-item" data-id="${c.id}" data-sym="${c.symbol}" data-name="${c.name}"><strong>${c.symbol}</strong> ${c.name}</div>`
-    ).join('');
-    dd.classList.remove('hidden');
-    dd.querySelectorAll('.dd-item').forEach(item => {
-      item.addEventListener('click', () => {
-        selectedHoldingCoin = { id: item.dataset.id, symbol: item.dataset.sym, name: item.dataset.name };
-        $('holdingCoinSearch').value = `${item.dataset.sym.toUpperCase()} — ${item.dataset.name}`;
-        dd.classList.add('hidden');
+    try {
+      const { coins } = await msg('SEARCH_COINS', { query: q });
+      if (!coins.length) { dd.classList.add('hidden'); return; }
+      dd.innerHTML = coins.slice(0, 6).map(c =>
+        `<div class="dd-item" data-id="${c.id}" data-sym="${c.symbol}" data-name="${c.name}"><strong>${c.symbol}</strong> ${c.name}</div>`
+      ).join('');
+      dd.classList.remove('hidden');
+      dd.querySelectorAll('.dd-item').forEach(item => {
+        item.addEventListener('click', () => {
+          selectedHoldingCoin = { id: item.dataset.id, symbol: item.dataset.sym, name: item.dataset.name };
+          $('holdingCoinSearch').value = `${item.dataset.sym.toUpperCase()} — ${item.dataset.name}`;
+          dd.classList.add('hidden');
+        });
       });
-    });
+    } catch (_) { dd.classList.add('hidden'); }
   }, 300);
 });
 
@@ -290,6 +514,7 @@ $('cancelHoldingBtn').addEventListener('click', () => {
   $('holdingCoinSearch').value = '';
   $('holdingAmount').value = '';
   $('holdingBuyPrice').value = '';
+  $('saveHoldingBtn').textContent = 'Add Holding';
 });
 
 $('saveHoldingBtn').addEventListener('click', async () => {
@@ -307,7 +532,7 @@ $('saveHoldingBtn').addEventListener('click', async () => {
   loadPortfolio();
 });
 
-// ── Market widgets ──────────────────────────────────────────────────
+// ── Market widgets ────────────────────────────────────────────────────────────
 function renderConverter() {
   const el = $('convSection');
   if (!el) return;
@@ -347,14 +572,22 @@ function renderConverter() {
   updateConv();
 }
 
-function renderGasCalc(standardGwei) {
+async function renderGasCalc(standardGwei) {
   const el = $('gasCalcEl');
   if (!el) return;
   const gwei = parseFloat(standardGwei);
   if (!gwei || isNaN(gwei)) return;
   const ethCoin = watchlistCoins.find(c => c.id === 'ethereum');
-  const ethPrice = ethCoin?.current_price;
+  let ethPrice = ethCoin?.current_price;
   const sym = settings.currencySymbol || '$';
+
+  if (!ethPrice) {
+    try {
+      const res = await msg('GET_SIMPLE_PRICES', { coinIds: ['ethereum'], currency: settings.currency || 'usd' });
+      ethPrice = res.priceMap?.ethereum;
+    } catch (_) {}
+  }
+
   const ops = [
     { label: 'ETH Transfer', gas: 21_000 },
     { label: 'ERC-20 Transfer', gas: 65_000 },
@@ -365,19 +598,21 @@ function renderGasCalc(standardGwei) {
     const costEth = op.gas * gwei * 1e-9;
     const display = ethPrice ? sym + (costEth * ethPrice).toFixed(2) : (costEth * 1e6).toFixed(2) + ' μETH';
     return `<div class="gas-op"><span class="gas-op-lbl">${op.label}</span><span class="gas-op-val">${display}</span></div>`;
-  }).join('')}${!ethPrice ? '<div class="gas-op-note">Add ETH to watchlist for USD costs</div>' : ''}</div>`;
+  }).join('')}</div>`;
 }
 
 function renderTrending(coins) {
   const el = $('trendEl');
   if (!el || !coins.length) return;
   const sym = settings.currencySymbol || '$';
+  const watchlistIds = new Set(watchlistCoins.map(c => c.id));
   el.innerHTML = coins.map((c, i) => {
     const ch = c.priceChangePercent24h;
     const chCls = (ch ?? 0) > 0 ? 'up' : (ch ?? 0) < 0 ? 'down' : 'neutral';
     const chSign = (ch ?? 0) > 0 ? '+' : '';
     const priceStr = (c.price && typeof c.price === 'number') ? fmtPrice(c.price, sym) : '—';
-    return `<div class="trend-row">
+    const inWl = watchlistIds.has(c.id);
+    return `<div class="trend-row" data-id="${c.id}" title="Open on CoinGecko">
       <span class="trend-rank">${i + 1}</span>
       <div class="trend-meta">
         <span class="trend-name">${c.name}</span>
@@ -387,18 +622,47 @@ function renderTrending(coins) {
         <span class="trend-price">${priceStr}</span>
         ${ch != null ? `<span class="badge ${chCls}" style="margin-top:0">${chSign}${ch.toFixed(2)}%</span>` : ''}
       </div>
+      <button class="trend-watch${inWl ? ' in-wl' : ''}" data-id="${c.id}" title="${inWl ? 'In watchlist' : 'Add to watchlist'}">${inWl ? '✓' : '+'}</button>
     </div>`;
   }).join('');
+
+  el.querySelectorAll('.trend-row').forEach(row => {
+    row.addEventListener('click', () => {
+      chrome.tabs.create({ url: `https://www.coingecko.com/en/coins/${row.dataset.id}` });
+    });
+  });
+
+  el.querySelectorAll('.trend-watch:not(.in-wl)').forEach(btn => {
+    btn.addEventListener('click', async e => {
+      e.stopPropagation();
+      const coinId = btn.dataset.id;
+      try {
+        const r = await msg('ADD_TO_WATCHLIST', { coinId });
+        if (r?.success) {
+          btn.classList.add('in-wl');
+          btn.textContent = '✓';
+          btn.title = 'In watchlist';
+          if (!r.alreadyIn) {
+            settings.watchlist = [...(settings.watchlist || []), coinId];
+            loadWatchlist();
+          }
+        } else if (r?.reason === 'full') {
+          btn.textContent = '!';
+          btn.title = 'Watchlist is full (max 20 coins)';
+          setTimeout(() => { btn.textContent = '+'; btn.title = 'Add to watchlist'; }, 2500);
+        }
+      } catch (_) {}
+    });
+  });
 }
 
 async function loadMarket() {
   const section = $('market');
-  section.innerHTML = `
-    <div class="market-inner">
-      <div class="widget">
-        <div class="widget-title">Fear &amp; Greed Index</div>
-        <div class="fg-wrap" id="fgContent"><div class="spinner" style="margin:20px auto"></div></div>
-      </div>
+  // Skip full rebuild if market data was loaded within the last 2 minutes
+  if (section.innerHTML && Date.now() - marketLoadedAt < 120_000) return;
+
+  const gasEnabled = settings.gasTrackerEnabled !== false;
+  const gasWidget = gasEnabled ? `
       <div class="widget">
         <div class="widget-title">ETH Gas Tracker <span class="widget-unit">Gwei</span></div>
         <div class="gas-row">
@@ -407,7 +671,15 @@ async function loadMarket() {
           <div class="gas-cell" id="gasFast"><span class="gas-lbl">Fast</span><span class="gas-val">—</span></div>
         </div>
         <div id="gasCalcEl"></div>
+      </div>` : '';
+
+  section.innerHTML = `
+    <div class="market-inner">
+      <div class="widget">
+        <div class="widget-title">Fear &amp; Greed Index</div>
+        <div class="fg-wrap" id="fgContent"><div class="spinner" style="margin:20px auto"></div></div>
       </div>
+      ${gasWidget}
       <div class="widget">
         <div class="widget-title">Quick Converter</div>
         <div id="convSection"></div>
@@ -441,7 +713,7 @@ async function loadMarket() {
   try {
     const [market, gas, trending] = await Promise.all([
       msg('GET_MARKET_OVERVIEW'),
-      msg('GET_GAS'),
+      gasEnabled ? msg('GET_GAS') : Promise.resolve(null),
       msg('GET_TRENDING'),
     ]);
 
@@ -470,7 +742,7 @@ async function loadMarket() {
       $('gasSlow').querySelector('.gas-val').textContent = gas.slow;
       $('gasStd').querySelector('.gas-val').textContent = gas.standard;
       $('gasFast').querySelector('.gas-val').textContent = gas.fast;
-      renderGasCalc(gas.standard);
+      await renderGasCalc(gas.standard);
     }
 
     if (trending?.coins?.length) {
@@ -487,10 +759,12 @@ async function loadMarket() {
       $('gEthDom').textContent = market.ethDominance?.toFixed(1) + '%';
       $('gActive').textContent = market.activeCryptocurrencies?.toLocaleString();
     }
+
+    marketLoadedAt = Date.now();
   } catch (e) { console.warn('Market load:', e); }
 }
 
-// ── Tabs ───────────────────────────────────────────────────────────────
+// ── Tabs ──────────────────────────────────────────────────────────────────────
 function switchTab(name) {
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === name));
@@ -502,6 +776,7 @@ document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () =>
 
 $('refreshBtn').addEventListener('click', async () => {
   $('refreshBtn').classList.add('spinning');
+  marketLoadedAt = 0;
   try { await msg('FORCE_REFRESH'); await loadWatchlist(); } catch {}
   $('refreshBtn').classList.remove('spinning');
 });
@@ -513,11 +788,46 @@ document.addEventListener('click', e => {
   if (!e.target.closest('#holdingCoinSearch') && !e.target.closest('#holdingSearchResults')) {
     $('holdingSearchResults').classList.add('hidden');
   }
+  if (!e.target.closest('#quickAddPanel') && !e.target.closest('#quickAddBtn')) {
+    $('quickAddResults').classList.add('hidden');
+  }
 });
+
+function renderUpdatedTs() {
+  if (!lastUpdatedAt) return;
+  const el = $('lastUpdated');
+  const secs = Math.max(0, Math.round((Date.now() - lastUpdatedAt) / 1000));
+  const stale = secs > 300;
+  const label =
+    secs < 5 ? 'Updated just now'
+    : secs < 60 ? `Updated ${secs}s ago`
+    : `Updated ${Math.floor(secs / 60)}m ago`;
+  el.textContent = stale ? `⚠ ${label} — prices may be outdated` : label;
+  el.classList.toggle('stale', stale);
+}
+setInterval(renderUpdatedTs, 5_000);
+
+// Live-refresh the watchlist while the popup stays open (served from the
+// service-worker cache, so this only hits the network when the cache expires)
+setInterval(() => {
+  const onWatchlist = document.querySelector('.tab.active')?.dataset.tab === 'watchlist';
+  const alertFormOpen = document.querySelector('.alert-inline:not(.hidden)');
+  if (onWatchlist && !alertFormOpen) loadWatchlist();
+}, 30_000);
 
 async function init() {
   try { settings = await msg('GET_SETTINGS'); } catch { settings = { ...DEFAULT_SETTINGS }; }
-  loadWatchlist();
+
+  if (settings.compactMode) document.body.classList.add('compact');
+
+  chrome.storage.local.get({ watchlistSort: 'default', expandedCoinId: null }, r => {
+    watchlistSort = r.watchlistSort || 'default';
+    expandedCoinId = r.expandedCoinId || null;
+    document.querySelectorAll('.sort-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.sort === watchlistSort);
+    });
+    loadWatchlist();
+  });
 }
 
 init();

@@ -1,4 +1,4 @@
-/* ── Design tokens ────────────────────────────────────────────────── */
+/* ── Design tokens ─────────────────────────────────────────────────── */
 :root {
   --bg-base:    #06090f;
   --bg-surface: #0b1220;
@@ -34,13 +34,14 @@
   --mono: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
 }
 
-/* ── Reset ─────────────────────────────────────────────────────────────── */
+/* ── Reset ────────────────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 button { font-family: var(--font); cursor: pointer; }
+button:focus-visible, a:focus-visible { outline: 2px solid var(--acc-border); outline-offset: 2px; }
 input, select { font-family: var(--font); }
 svg { display: block; }
 
-/* ── Shell ─────────────────────────────────────────────────────────────── */
+/* ── Shell ────────────────────────────────────────────────────────────────── */
 body {
   width: 390px;
   height: 572px;
@@ -61,7 +62,7 @@ body {
     var(--bg-base);
 }
 
-/* ── Header ─────────────────────────────────────────────────────────────── */
+/* ── Header ────────────────────────────────────────────────────────────────── */
 .app-header {
   display: flex; align-items: center; justify-content: space-between;
   padding: 12px 16px 11px;
@@ -92,10 +93,11 @@ body {
   transition: color 0.15s, background 0.15s;
 }
 .icon-btn:hover { color: var(--t-primary); background: var(--bg-hover); }
+.icon-btn:active { transform: scale(0.9); }
 .icon-btn.spinning svg { animation: spin 0.65s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* ── Tab nav ────────────────────────────────────────────────────────────── */
+/* ── Tab nav ────────────────────────────────────────────────────────────────── */
 .tab-nav {
   display: flex; background: var(--bg-surface);
   border-bottom: 1px solid var(--border);
@@ -111,7 +113,7 @@ body {
 .tab:hover:not(.active) { color: var(--t-muted); }
 .tab.active { color: var(--acc); border-bottom-color: var(--acc); }
 
-/* ── Tab panels ──────────────────────────────────────────────────────────── */
+/* ── Tab panels ────────────────────────────────────────────────────────────────── */
 .tab-content { flex: 1; overflow: hidden; position: relative; }
 .tab-panel {
   display: none; flex-direction: column; height: 100%;
@@ -120,14 +122,19 @@ body {
 }
 .tab-panel::-webkit-scrollbar { width: 4px; }
 .tab-panel::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 4px; }
-.tab-panel.active { display: flex; }
+.tab-panel.active { display: flex; animation: panelIn 0.18s ease; }
+@keyframes panelIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 
-/* ── Sort controls ───────────────────────────────────────────────────────── */
+/* ── Sort controls ────────────────────────────────────────────────────────────────── */
 .list-controls {
   padding: 7px 14px;
   border-bottom: 1px solid var(--border);
   background: var(--bg-surface);
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
 .sort-btns { display: flex; gap: 5px; }
 .sort-btn {
@@ -147,7 +154,7 @@ body {
   background: var(--acc-glow);
 }
 
-/* ── Coin rows ───────────────────────────────────────────────────────────── */
+/* ── Coin rows ─────────────────────────────────────────────────────────────────────── */
 .coin-list { flex: 1; }
 .coin-row {
   display: flex; align-items: center; gap: 11px;
@@ -184,6 +191,48 @@ body {
   padding: 8px 14px 6px;
   background: rgba(0,0,0,0.18);
 }
+.expand-actions {
+  padding: 6px 14px 4px;
+  display: flex;
+  gap: 7px;
+}
+.copy-price-btn {
+  background: var(--bg-raised); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); color: var(--t-muted);
+  font-size: 11.5px; font-weight: 700; padding: 4px 10px;
+  font-variant-numeric: tabular-nums;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+.copy-price-btn:hover { background: rgba(247,147,26,0.1); border-color: var(--acc-border); color: var(--acc); }
+.alert-btn {
+  background: var(--bg-raised); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); color: var(--t-muted);
+  font-size: 11.5px; font-weight: 700; padding: 4px 10px;
+  display: inline-flex; align-items: center; gap: 5px;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+.alert-btn:hover { background: rgba(247,147,26,0.1); border-color: var(--acc-border); color: var(--acc); }
+.alert-inline {
+  display: flex; gap: 7px; align-items: center;
+  padding: 2px 14px 8px;
+  animation: slideIn 0.15s ease;
+}
+.alert-inline select, .alert-inline input {
+  background: var(--bg-overlay); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); color: var(--t-primary);
+  font-size: 11.5px; padding: 5px 8px; outline: none;
+  transition: border-color 0.15s;
+}
+.alert-inline select { flex: 0 0 auto; cursor: pointer; }
+.alert-inline input { flex: 1; min-width: 0; font-variant-numeric: tabular-nums; }
+.alert-inline input:focus, .alert-inline select:focus { border-color: var(--acc); }
+.ai-save {
+  background: var(--acc-glow); border: 1px solid var(--acc-border);
+  border-radius: var(--radius-sm); color: var(--acc);
+  font-size: 11px; font-weight: 700; padding: 5px 12px; white-space: nowrap;
+  transition: background 0.12s;
+}
+.ai-save:hover { background: rgba(247,147,26,0.25); }
 .expand-links {
   display: flex;
   gap: 7px;
@@ -234,7 +283,7 @@ body {
   font-variant-numeric: tabular-nums; color: var(--t-primary); letter-spacing: -0.2px;
 }
 
-/* ── Badges ─────────────────────────────────────────────────────────────── */
+/* ── Badges ──────────────────────────────────────────────────────────────────────── */
 .badge {
   display: inline-flex; align-items: center; gap: 2px;
   font-size: 10.5px; font-weight: 700; padding: 2px 6px;
@@ -245,13 +294,13 @@ body {
 .badge.down { color: var(--red);   background: var(--red-dim); }
 .badge.neutral { color: var(--t-subtle); background: transparent; }
 
-/* ── Portfolio ────────────────────────────────────────────────────────────── */
+/* ── Portfolio ──────────────────────────────────────────────────────────────────────── */
 .portfolio-summary {
-  display: grid; grid-template-columns: 1fr 1fr;
+  display: grid; grid-template-columns: repeat(3, 1fr);
   border-bottom: 1px solid var(--border); flex-shrink: 0;
   background: linear-gradient(180deg, rgba(247,147,26,0.04) 0%, transparent 100%);
 }
-.ps-item { padding: 14px 16px; position: relative; }
+.ps-item { padding: 12px 12px; position: relative; min-width: 0; }
 .ps-item + .ps-item::before {
   content: ''; position: absolute; left: 0; top: 20%; bottom: 20%;
   width: 1px; background: var(--border);
@@ -260,14 +309,14 @@ body {
   display: block; font-size: 9.5px; font-weight: 700; color: var(--t-subtle);
   text-transform: uppercase; letter-spacing: 0.09em; margin-bottom: 4px;
 }
-.ps-value { font-size: 16px; font-weight: 800; letter-spacing: -0.5px; color: var(--t-primary); }
+.ps-value { font-size: 13px; font-weight: 800; letter-spacing: -0.3px; color: var(--t-primary); font-variant-numeric: tabular-nums; }
 .ps-value.up { color: var(--green); }
 .ps-value.down { color: var(--red); }
-.portfolio-row { position: relative; cursor: default; }
+.portfolio-row { position: relative; cursor: pointer; }
 .rm-holding { opacity: 0; transition: opacity 0.15s; color: var(--t-subtle) !important; }
 .portfolio-row:hover .rm-holding { opacity: 1; }
 
-/* ── Add holding form ─────────────────────────────────────────────────────── */
+/* ── Add holding form ─────────────────────────────────────────────────────────────────── */
 .form-panel {
   margin: 10px 16px 0; padding: 14px;
   background: var(--bg-raised); border: 1px solid var(--border);
@@ -328,7 +377,7 @@ body {
 }
 .text-btn:hover { opacity: 1; }
 
-/* ── Market tab ───────────────────────────────────────────────────────────── */
+/* ── Market tab ──────────────────────────────────────────────────────────────────────── */
 .market-inner { padding: 12px 14px 16px; display: flex; flex-direction: column; gap: 10px; }
 .widget {
   background: var(--bg-surface); border: 1px solid var(--border);
@@ -430,6 +479,17 @@ body {
 .trend-right { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; flex-shrink: 0; }
 .trend-price { font-size: 12px; font-weight: 700; color: var(--t-primary); font-variant-numeric: tabular-nums; }
 
+/* Trending watch button */
+.trend-watch {
+  background: none; border: 1px solid var(--border); border-radius: 5px;
+  color: var(--t-subtle); width: 22px; height: 22px;
+  font-size: 14px; font-weight: 700; line-height: 1; padding: 0;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  transition: color 0.12s, background 0.12s, border-color 0.12s;
+}
+.trend-watch:hover:not(.in-wl) { color: var(--acc); border-color: var(--acc-border); background: rgba(247,147,26,0.1); }
+.trend-watch.in-wl { color: var(--green); border-color: rgba(0,210,106,0.25); cursor: default; }
+
 /* Global stats */
 .stats-list { padding: 2px 0; }
 .stat-row {
@@ -440,7 +500,7 @@ body {
 .stat-lbl { font-size: 12px; color: var(--t-muted); }
 .stat-val { font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
 
-/* ── Footer ─────────────────────────────────────────────────────────────── */
+/* ── Footer ──────────────────────────────────────────────────────────────────────── */
 .app-footer {
   display: flex; justify-content: space-between; align-items: center;
   padding: 6px 16px; background: var(--bg-surface);
@@ -448,7 +508,7 @@ body {
 }
 .footer-ts, .footer-credit { font-size: 9.5px; color: var(--t-subtle); letter-spacing: 0.02em; }
 
-/* ── States ─────────────────────────────────────────────────────────────── */
+/* ── States ──────────────────────────────────────────────────────────────────────── */
 .loading-state, .empty, .error {
   display: flex; align-items: center; justify-content: center;
   flex-direction: column; gap: 10px; padding: 44px 20px;
@@ -479,3 +539,83 @@ body {
 .up   { color: var(--green) !important; }
 .down { color: var(--red)   !important; }
 .hidden { display: none !important; }
+
+/* ── Quick add & stale indicator ──────────────────────────────────── */
+.quick-add-btn { padding: 4px; border: 1px solid var(--border); border-radius: 5px; }
+.quick-add-btn:hover { border-color: var(--acc-border); color: var(--acc); background: var(--acc-glow); }
+.quick-add-panel {
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-surface);
+  flex-shrink: 0;
+  animation: slideIn 0.15s ease;
+}
+.quick-add-panel input {
+  width: 100%;
+  padding: 7px 10px;
+  background: var(--bg-overlay);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--t-primary);
+  font-size: 12.5px;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.quick-add-panel input:focus { border-color: var(--acc); box-shadow: 0 0 0 3px var(--acc-glow); }
+.quick-add-panel input::placeholder { color: var(--t-subtle); }
+.dd-item.dd-added { opacity: 0.45; pointer-events: none; }
+.dd-check { color: var(--green); font-weight: 700; }
+.footer-ts.stale { color: #ffb347; }
+
+/* ── Motion & states ──────────────────────────────────────────────── */
+@keyframes rowIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.coin-row.row-enter { animation: rowIn 0.3s ease backwards; }
+
+@keyframes sparkDraw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes sparkFade { from { opacity: 0; } to { opacity: 1; } }
+.spark-draw { stroke-dasharray: 1; animation: sparkDraw 0.7s ease-out forwards; }
+.spark-fill { animation: sparkFade 0.9s ease-out; }
+
+.search-dropdown { animation: slideIn 0.12s ease; }
+
+.empty-cta {
+  background: var(--acc-glow);
+  border: 1px solid var(--acc-border);
+  border-radius: var(--radius-sm);
+  color: var(--acc);
+  font-size: 12px; font-weight: 700;
+  padding: 7px 16px; margin-top: 2px;
+  transition: background 0.15s, transform 0.1s;
+}
+.empty-cta:hover { background: rgba(247,147,26,0.25); transform: translateY(-1px); }
+.empty-cta:active { transform: translateY(0); }
+
+/* ── Live refresh, alerts & portfolio QoL ─────────────────────────── */
+@keyframes flashUp   { 0% { color: var(--green); } 100% { color: var(--t-primary); } }
+@keyframes flashDown { 0% { color: var(--red);   } 100% { color: var(--t-primary); } }
+.coin-price.flash-up   { animation: flashUp 1.6s ease-out; }
+.coin-price.flash-down { animation: flashDown 1.6s ease-out; }
+
+.row-bell { display: inline-block; margin-left: 5px; color: var(--acc); opacity: 0.85; }
+
+.trend-row { cursor: pointer; transition: background 0.12s; }
+.trend-row:hover { background: var(--bg-hover); }
+
+.alloc-bar-wrap { grid-column: 1 / -1; padding: 0 16px 12px; }
+.alloc-bar { display: flex; height: 6px; border-radius: 3px; overflow: hidden; gap: 2px; }
+.alloc-seg { min-width: 3px; border-radius: 2px; }
+
+/* ── Compact mode ────────────────────────────────────────────────────────────────── */
+body.compact #watchlist .coin-row { padding: 6px 10px; }
+body.compact #watchlist .coin-sym { display: none; }
+body.compact #watchlist .coin-spark { display: none; }
+body.compact #watchlist .coin-av { width: 28px; height: 28px; font-size: 11px; }
+
+/* ── Reduced motion ───────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -43,6 +43,15 @@
           <button class="sort-btn" data-sort="24h_asc">24h ↑</button>
           <button class="sort-btn" data-sort="name_asc">A→Z</button>
         </div>
+        <button id="quickAddBtn" class="icon-btn quick-add-btn" title="Add coin to watchlist">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
+      </div>
+      <div id="quickAddPanel" class="quick-add-panel hidden">
+        <div class="search-wrap">
+          <input type="text" id="quickAddSearch" placeholder="Search coins to add&hellip;" autocomplete="off">
+          <div id="quickAddResults" class="search-dropdown hidden"></div>
+        </div>
       </div>
       <div id="watchlistList" class="coin-list">
         <div class="sk-row"><div class="skeleton sk-av"></div><div class="sk-lines"><div class="skeleton sk-name"></div><div class="skeleton sk-sub"></div></div><div class="sk-right"><div class="skeleton sk-price"></div><div class="skeleton sk-chg"></div></div></div>
@@ -62,9 +71,14 @@
           <span id="portfolioTotal" class="ps-value">&mdash;</span>
         </div>
         <div class="ps-item">
+          <span class="ps-label">24h</span>
+          <span id="portfolioDay" class="ps-value">&mdash;</span>
+        </div>
+        <div class="ps-item">
           <span class="ps-label">Total P&amp;L</span>
           <span id="portfolioPnl" class="ps-value">&mdash;</span>
         </div>
+        <div id="allocBar" class="alloc-bar-wrap hidden"></div>
       </div>
       <div id="portfolioList" class="coin-list"></div>
       <button id="addHoldingBtn" class="text-btn">+ Add Holding</button>

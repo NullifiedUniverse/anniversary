@@ -1,13 +1,20 @@
-import { fetchMarketData, fetchCoinDetails, fetchFearGreed, fetchGasPrice, fetchGlobalData, searchCoins, fetchTrending } from '../shared/api.js';
-import { DEFAULT_SETTINGS } from '../shared/constants.js';
+import { fetchMarketData, fetchCoinDetails, fetchFearGreed, fetchGasPrice, fetchGlobalData, searchCoins, fetchTrending, fetchSimplePrice } from '../shared/api.js';
+import { DEFAULT_SETTINGS, COIN_MAP, CACHE_TTL_MS, ALERT_REPEAT_INTERVALS } from '../shared/constants.js';
 
-const CACHE_TTL = 45_000;
+const ALERT_COOLDOWN_ONCE = 10 * 60_000;
 
 async function getSettings() {
   return new Promise(resolve => {
     chrome.storage.sync.get({ settings: DEFAULT_SETTINGS }, r => {
       resolve({ ...DEFAULT_SETTINGS, ...r.settings });
     });
+  });
+}
+
+function createRefreshAlarm(settings) {
+  const mins = Math.max(0.5, ((settings?.refreshInterval) || 60) / 60);
+  chrome.alarms.clear('price-refresh', () => {
+    chrome.alarms.create('price-refresh', { periodInMinutes: mins });
   });
 }
 
@@ -19,27 +26,52 @@ function formatBadgePrice(price) {
   return price.toFixed(3);
 }
 
-async function updateBadge(coins) {
+async function updateBadge(coins, settings) {
   try {
-    const btc = coins.find(c => c.id === 'bitcoin');
-    if (btc && btc.current_price) {
-      chrome.action.setBadgeText({ text: formatBadgePrice(btc.current_price) });
+    if (settings && settings.badgeEnabled === false) {
+      chrome.action.setBadgeText({ text: '' });
+      return;
+    }
+    const lead = coins.find(c => c.id === 'bitcoin') || coins[0];
+    if (lead && lead.current_price) {
+      chrome.action.setBadgeText({ text: formatBadgePrice(lead.current_price) });
       chrome.action.setBadgeBackgroundColor({ color: '#f7931a' });
+    } else {
+      chrome.action.setBadgeText({ text: '' });
     }
   } catch (_) {}
 }
 
+function fmtNotifPrice(p) {
+  if (p === null || p === undefined || isNaN(p)) return '—';
+  if (p >= 1000) return p.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  if (p >= 1) return p.toFixed(2);
+  if (p >= 0.001) return p.toFixed(4);
+  return p.toFixed(8);
+}
+
 async function refreshWatchlistPrices(settings) {
   if (!settings) settings = await getSettings();
-  const { watchlist = [], currency = 'usd' } = settings;
-  if (!watchlist.length) return;
+  const { watchlist = [], currency = 'usd', alerts = [] } = settings;
+  // Include alert coins so alerts fire even for coins not on the watchlist
+  const alertIds = settings.alertsEnabled ? alerts.map(a => a.coinId) : [];
+  const fetchIds = [...new Set([...watchlist, ...alertIds])];
+  if (!fetchIds.length) {
+    chrome.storage.local.set({ watchlistCache: [], watchlistCacheTs: Date.now() });
+    chrome.action.setBadgeText({ text: '' });
+    return;
+  }
   try {
-    const coins = await fetchMarketData(watchlist, currency);
-    const ts = Date.now();
-    chrome.storage.local.set({ watchlistCache: coins, watchlistCacheTs: ts });
-    updateBadge(coins);
-    if (settings.alertsEnabled && settings.alerts?.length) {
-      checkAlerts(coins, settings.alerts, settings.currencySymbol || '$');
+    const coins = await fetchMarketData(fetchIds, currency);
+    // Cache only watchlist coins, in the user's chosen order
+    const order = new Map(watchlist.map((id, i) => [id, i]));
+    const wlCoins = coins
+      .filter(c => order.has(c.id))
+      .sort((a, b) => order.get(a.id) - order.get(b.id));
+    chrome.storage.local.set({ watchlistCache: wlCoins, watchlistCacheTs: Date.now() });
+    updateBadge(wlCoins, settings);
+    if (settings.alertsEnabled && alerts.length) {
+      checkAlerts(coins, alerts, settings.currencySymbol || '$');
     }
   } catch (err) {
     console.warn('[CryptoLens] Price refresh failed:', err.message);
@@ -47,51 +79,66 @@ async function refreshWatchlistPrices(settings) {
 }
 
 function checkAlerts(coins, alerts, currSymbol) {
-  const triggered = [];
+  const now = Date.now();
+  const toFire = [];
+  const needsMigration = alerts.some(a => a.triggered === true && !a.lastFiredAt);
+
   for (const alert of alerts) {
-    if (alert.triggered) continue;
+    const repeatMode = alert.repeatMode || 'once';
+    const isPctAlert = alert.type === 'chg_up' || alert.type === 'chg_down';
+    const lastFiredAt = alert.lastFiredAt || (alert.triggered ? now : 0);
+    // A 24h move stays past its threshold for hours, so one-shot percent
+    // alerts re-arm on a much longer cooldown than price-target alerts
+    const cooldown = repeatMode === 'once'
+      ? (isPctAlert ? 4 * 3_600_000 : ALERT_COOLDOWN_ONCE)
+      : (ALERT_REPEAT_INTERVALS[repeatMode] || 0);
+
+    if (lastFiredAt && (now - lastFiredAt) < cooldown) continue;
+
     const coin = coins.find(c => c.id === alert.coinId);
     if (!coin) continue;
     const price = coin.current_price;
-    if ((alert.type === 'above' && price >= alert.price) ||
-        (alert.type === 'below' && price <= alert.price)) {
-      triggered.push({ ...alert, currentPrice: price });
-    }
+    const pct24 = coin.price_change_percentage_24h;
+    const hit =
+      (alert.type === 'above' && price >= alert.price) ||
+      (alert.type === 'below' && price <= alert.price) ||
+      (alert.type === 'chg_up' && pct24 != null && pct24 >= alert.price) ||
+      (alert.type === 'chg_down' && pct24 != null && pct24 <= -alert.price);
+    if (hit) toFire.push({ ...alert, currentPrice: price, currentPct: pct24 });
   }
-  for (const alert of triggered) {
-    chrome.notifications.create(`cl-alert-${Date.now()}`, {
+
+  for (const alert of toFire) {
+    const isPct = alert.type === 'chg_up' || alert.type === 'chg_down';
+    const message = isPct
+      ? `24h change hit ${alert.currentPct >= 0 ? '+' : ''}${alert.currentPct.toFixed(2)}% (threshold ${alert.type === 'chg_up' ? '+' : '−'}${alert.price}%) — now ${currSymbol}${fmtNotifPrice(alert.currentPrice)}`
+      : `Price ${alert.type === 'above' ? 'rose above' : 'dropped below'} ${currSymbol}${fmtNotifPrice(alert.price)} — now ${currSymbol}${fmtNotifPrice(alert.currentPrice)}`;
+    chrome.notifications.create(`cl-alert-${Date.now()}-${alert.coinId}`, {
       type: 'basic',
       iconUrl: chrome.runtime.getURL('icons/icon48.png'),
       title: `CryptoLens: ${alert.coinName || alert.coinId}`,
-      message: `Price ${alert.type === 'above' ? 'rose above' : 'dropped below'} ${currSymbol}${alert.price.toLocaleString()} — now ${currSymbol}${alert.currentPrice.toLocaleString()}`,
+      message,
       priority: 2,
     });
   }
-  if (triggered.length) {
+
+  if (toFire.length || needsMigration) {
     chrome.storage.sync.get({ settings: DEFAULT_SETTINGS }, r => {
-      const s = r.settings;
-      s.alerts = s.alerts.map(a =>
-        triggered.find(t => t.coinId === a.coinId && t.price === a.price)
-          ? { ...a, triggered: true } : a
-      );
+      const s = { ...DEFAULT_SETTINGS, ...r.settings };
+      s.alerts = s.alerts.map(a => {
+        const isFired = toFire.some(t => t.coinId === a.coinId && t.type === a.type && t.price === a.price);
+        const isLegacy = a.triggered === true && !a.lastFiredAt;
+        if (isFired || isLegacy) {
+          const { triggered: _t, ...rest } = a;
+          return { ...rest, repeatMode: rest.repeatMode || 'once', lastFiredAt: Date.now() };
+        }
+        return a;
+      });
       chrome.storage.sync.set({ settings: s });
     });
   }
 }
 
-// ── Context menu ─────────────────────────────────────────────────────
-const CONTEXT_COIN_IDS = {
-  BTC:'bitcoin',ETH:'ethereum',BNB:'binancecoin',XRP:'ripple',SOL:'solana',
-  ADA:'cardano',DOGE:'dogecoin',TRX:'tron',TON:'the-open-network',AVAX:'avalanche-2',
-  SHIB:'shiba-inu',LINK:'chainlink',DOT:'polkadot',BCH:'bitcoin-cash',NEAR:'near',
-  MATIC:'matic-network',LTC:'litecoin',UNI:'uniswap',APT:'aptos',XLM:'stellar',
-  ATOM:'cosmos',OP:'optimism',ARB:'arbitrum',XMR:'monero',PEPE:'pepe',
-  BITCOIN:'bitcoin',ETHEREUM:'ethereum',SOLANA:'solana',DOGECOIN:'dogecoin',
-  CARDANO:'cardano',RIPPLE:'ripple',POLKADOT:'polkadot',POLYGON:'matic-network',
-  AVALANCHE:'avalanche-2',CHAINLINK:'chainlink',UNISWAP:'uniswap',LITECOIN:'litecoin',
-  COSMOS:'cosmos',STELLAR:'stellar',MONERO:'monero',OPTIMISM:'optimism',ARBITRUM:'arbitrum',
-};
-
+// ── Context menu ──────────────────────────────────────────────────────────────
 function setupContextMenu() {
   chrome.contextMenus.removeAll(() => {
     chrome.contextMenus.create({
@@ -104,9 +151,9 @@ function setupContextMenu() {
 
 chrome.contextMenus.onClicked.addListener(async (info) => {
   if (info.menuItemId !== 'cl-check-price') return;
-  const raw = (info.selectionText || '').trim().toUpperCase().replace(/[^A-Z]/g, '');
+  const raw = (info.selectionText || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
   if (!raw) return;
-  const coinId = CONTEXT_COIN_IDS[raw];
+  const coinId = COIN_MAP[raw]?.id;
   if (!coinId) {
     chrome.notifications.create(`cl-notfound-${Date.now()}`, {
       type: 'basic',
@@ -127,7 +174,7 @@ chrome.contextMenus.onClicked.addListener(async (info) => {
     const priceStr = price >= 1000
       ? sym + price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
       : sym + (price?.toFixed(4) ?? '—');
-    chrome.notifications.create(`cl-price-${Date.now()}`, {
+    chrome.notifications.create(`cl-price-${Date.now()}-${coinId}`, {
       type: 'basic',
       iconUrl: chrome.runtime.getURL('icons/icon48.png'),
       title: `${data.name} (${data.symbol.toUpperCase()})`,
@@ -144,18 +191,24 @@ chrome.contextMenus.onClicked.addListener(async (info) => {
   }
 });
 
-chrome.runtime.onInstalled.addListener(async () => {
-  const s = await getSettings();
-  if (!s.watchlist) await chrome.storage.sync.set({ settings: DEFAULT_SETTINGS });
-  chrome.alarms.create('price-refresh', { periodInMinutes: 1 });
-  setupContextMenu();
-  refreshWatchlistPrices();
+chrome.notifications.onClicked.addListener(id => {
+  const m = id.match(/^cl-(?:alert|price)-\d+-(.+)$/);
+  if (m) chrome.tabs.create({ url: `https://www.coingecko.com/en/coins/${m[1]}` });
+  chrome.notifications.clear(id);
 });
 
-chrome.runtime.onStartup.addListener(() => {
-  chrome.alarms.create('price-refresh', { periodInMinutes: 1 });
+chrome.runtime.onInstalled.addListener(async () => {
+  const s = await getSettings();
+  createRefreshAlarm(s);
   setupContextMenu();
-  refreshWatchlistPrices();
+  refreshWatchlistPrices(s);
+});
+
+chrome.runtime.onStartup.addListener(async () => {
+  const s = await getSettings();
+  createRefreshAlarm(s);
+  setupContextMenu();
+  refreshWatchlistPrices(s);
 });
 
 chrome.alarms.onAlarm.addListener(alarm => {
@@ -203,17 +256,30 @@ async function handleMessage(msg) {
       return new Promise(resolve => {
         chrome.storage.local.get({ watchlistCache: null, watchlistCacheTs: 0 }, r => {
           const age = Date.now() - r.watchlistCacheTs;
-          if (r.watchlistCache && age < CACHE_TTL) {
-            resolve({ coins: r.watchlistCache, currency: settings.currency, currencySymbol: settings.currencySymbol });
+          if (r.watchlistCache && age < CACHE_TTL_MS) {
+            resolve({ coins: r.watchlistCache, currency: settings.currency, currencySymbol: settings.currencySymbol, fetchedAt: r.watchlistCacheTs });
           } else {
             refreshWatchlistPrices(settings).then(() => {
-              chrome.storage.local.get({ watchlistCache: [] }, r2 => {
-                resolve({ coins: r2.watchlistCache || [], currency: settings.currency, currencySymbol: settings.currencySymbol });
+              chrome.storage.local.get({ watchlistCache: [], watchlistCacheTs: 0 }, r2 => {
+                resolve({ coins: r2.watchlistCache || [], currency: settings.currency, currencySymbol: settings.currencySymbol, fetchedAt: r2.watchlistCacheTs });
               });
             });
           }
         });
       });
+    }
+
+    case 'GET_SIMPLE_PRICES': {
+      const { coinIds, currency: reqCur } = msg.payload;
+      const cur = reqCur || settings.currency;
+      const raw = await fetchSimplePrice(coinIds, cur);
+      const priceMap = {};
+      const changeMap = {};
+      for (const [id, vals] of Object.entries(raw)) {
+        priceMap[id] = vals[cur];
+        changeMap[id] = vals[`${cur}_24h_change`];
+      }
+      return { priceMap, changeMap, currency: settings.currency, currencySymbol: settings.currencySymbol };
     }
 
     case 'GET_MARKET_OVERVIEW': {
@@ -277,10 +343,21 @@ async function handleMessage(msg) {
     case 'SAVE_SETTINGS': {
       const merged = { ...settings, ...msg.payload };
       await chrome.storage.sync.set({ settings: merged });
-      chrome.alarms.clear('price-refresh', () => {
-        chrome.alarms.create('price-refresh', { periodInMinutes: 1 });
-      });
-      refreshWatchlistPrices(merged);
+      if (merged.refreshInterval !== settings.refreshInterval) createRefreshAlarm(merged);
+      if (merged.badgeEnabled === false && settings.badgeEnabled !== false) {
+        chrome.action.setBadgeText({ text: '' });
+      } else if (merged.badgeEnabled !== false && settings.badgeEnabled === false) {
+        refreshWatchlistPrices(merged);
+      }
+      // Only refetch when something price-affecting changed
+      const needsRefetch =
+        merged.currency !== settings.currency ||
+        JSON.stringify(merged.watchlist) !== JSON.stringify(settings.watchlist) ||
+        JSON.stringify(merged.alerts) !== JSON.stringify(settings.alerts);
+      if (needsRefetch) {
+        chrome.storage.local.set({ watchlistCacheTs: 0 });
+        refreshWatchlistPrices(merged);
+      }
       return { success: true };
     }
 
@@ -288,6 +365,18 @@ async function handleMessage(msg) {
       chrome.storage.local.set({ watchlistCacheTs: 0 });
       await refreshWatchlistPrices(settings);
       return { success: true };
+    }
+
+    case 'ADD_TO_WATCHLIST': {
+      const { coinId } = msg.payload;
+      if (!coinId) return { success: false };
+      if (settings.watchlist.includes(coinId)) return { success: true, alreadyIn: true };
+      if (settings.watchlist.length >= 20) return { success: false, reason: 'full' };
+      const updated = { ...settings, watchlist: [...settings.watchlist, coinId] };
+      await chrome.storage.sync.set({ settings: updated });
+      chrome.storage.local.set({ watchlistCacheTs: 0 });
+      refreshWatchlistPrices(updated);
+      return { success: true, alreadyIn: false };
     }
 
     default:

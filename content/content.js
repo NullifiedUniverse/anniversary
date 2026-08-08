@@ -6,75 +6,144 @@
   window.__cryptoLensLoaded = true;
 
   const COIN_MAP = {
-    BTC: { id: 'bitcoin', name: 'Bitcoin', symbol: 'BTC' },
-    ETH: { id: 'ethereum', name: 'Ethereum', symbol: 'ETH' },
-    BNB: { id: 'binancecoin', name: 'BNB', symbol: 'BNB' },
-    XRP: { id: 'ripple', name: 'XRP', symbol: 'XRP' },
-    SOL: { id: 'solana', name: 'Solana', symbol: 'SOL' },
-    ADA: { id: 'cardano', name: 'Cardano', symbol: 'ADA' },
-    DOGE: { id: 'dogecoin', name: 'Dogecoin', symbol: 'DOGE' },
-    TRX: { id: 'tron', name: 'TRON', symbol: 'TRX' },
-    TON: { id: 'the-open-network', name: 'Toncoin', symbol: 'TON' },
-    AVAX: { id: 'avalanche-2', name: 'Avalanche', symbol: 'AVAX' },
-    SHIB: { id: 'shiba-inu', name: 'Shiba Inu', symbol: 'SHIB' },
-    LINK: { id: 'chainlink', name: 'Chainlink', symbol: 'LINK' },
-    DOT: { id: 'polkadot', name: 'Polkadot', symbol: 'DOT' },
-    BCH: { id: 'bitcoin-cash', name: 'Bitcoin Cash', symbol: 'BCH' },
-    NEAR: { id: 'near', name: 'NEAR Protocol', symbol: 'NEAR' },
-    MATIC: { id: 'matic-network', name: 'Polygon', symbol: 'MATIC' },
-    LTC: { id: 'litecoin', name: 'Litecoin', symbol: 'LTC' },
-    UNI: { id: 'uniswap', name: 'Uniswap', symbol: 'UNI' },
-    APT: { id: 'aptos', name: 'Aptos', symbol: 'APT' },
-    XLM: { id: 'stellar', name: 'Stellar', symbol: 'XLM' },
-    ATOM: { id: 'cosmos', name: 'Cosmos', symbol: 'ATOM' },
-    OP: { id: 'optimism', name: 'Optimism', symbol: 'OP' },
-    ARB: { id: 'arbitrum', name: 'Arbitrum', symbol: 'ARB' },
-    HBAR: { id: 'hedera-hashgraph', name: 'Hedera', symbol: 'HBAR' },
-    VET: { id: 'vechain', name: 'VeChain', symbol: 'VET' },
-    MKR: { id: 'maker', name: 'Maker', symbol: 'MKR' },
-    AAVE: { id: 'aave', name: 'Aave', symbol: 'AAVE' },
-    INJ: { id: 'injective-protocol', name: 'Injective', symbol: 'INJ' },
-    SUI: { id: 'sui', name: 'Sui', symbol: 'SUI' },
-    XMR: { id: 'monero', name: 'Monero', symbol: 'XMR' },
-    PEPE: { id: 'pepe', name: 'Pepe', symbol: 'PEPE' },
-    ICP: { id: 'internet-computer', name: 'Internet Computer', symbol: 'ICP' },
-    FIL: { id: 'filecoin', name: 'Filecoin', symbol: 'FIL' },
-    ALGO: { id: 'algorand', name: 'Algorand', symbol: 'ALGO' },
-    USDT: { id: 'tether', name: 'Tether', symbol: 'USDT' },
-    USDC: { id: 'usd-coin', name: 'USD Coin', symbol: 'USDC' },
-    DAI: { id: 'dai', name: 'Dai', symbol: 'DAI' },
-    GRT: { id: 'the-graph', name: 'The Graph', symbol: 'GRT' },
-    BITCOIN: { id: 'bitcoin', name: 'Bitcoin', symbol: 'BTC' },
-    ETHEREUM: { id: 'ethereum', name: 'Ethereum', symbol: 'ETH' },
-    SOLANA: { id: 'solana', name: 'Solana', symbol: 'SOL' },
-    DOGECOIN: { id: 'dogecoin', name: 'Dogecoin', symbol: 'DOGE' },
-    CARDANO: { id: 'cardano', name: 'Cardano', symbol: 'ADA' },
-    RIPPLE: { id: 'ripple', name: 'XRP', symbol: 'XRP' },
-    POLKADOT: { id: 'polkadot', name: 'Polkadot', symbol: 'DOT' },
-    POLYGON: { id: 'matic-network', name: 'Polygon', symbol: 'MATIC' },
-    AVALANCHE: { id: 'avalanche-2', name: 'Avalanche', symbol: 'AVAX' },
-    CHAINLINK: { id: 'chainlink', name: 'Chainlink', symbol: 'LINK' },
-    UNISWAP: { id: 'uniswap', name: 'Uniswap', symbol: 'UNI' },
-    LITECOIN: { id: 'litecoin', name: 'Litecoin', symbol: 'LTC' },
-    COSMOS: { id: 'cosmos', name: 'Cosmos', symbol: 'ATOM' },
-    STELLAR: { id: 'stellar', name: 'Stellar', symbol: 'XLM' },
-    MONERO: { id: 'monero', name: 'Monero', symbol: 'XMR' },
-    OPTIMISM: { id: 'optimism', name: 'Optimism', symbol: 'OP' },
-    ARBITRUM: { id: 'arbitrum', name: 'Arbitrum', symbol: 'ARB' },
+    BTC:  { id: 'bitcoin',            name: 'Bitcoin',           symbol: 'BTC'  },
+    ETH:  { id: 'ethereum',           name: 'Ethereum',          symbol: 'ETH'  },
+    BNB:  { id: 'binancecoin',        name: 'BNB',               symbol: 'BNB'  },
+    XRP:  { id: 'ripple',             name: 'XRP',               symbol: 'XRP'  },
+    SOL:  { id: 'solana',             name: 'Solana',            symbol: 'SOL'  },
+    ADA:  { id: 'cardano',            name: 'Cardano',           symbol: 'ADA'  },
+    DOGE: { id: 'dogecoin',           name: 'Dogecoin',          symbol: 'DOGE' },
+    TRX:  { id: 'tron',               name: 'TRON',              symbol: 'TRX'  },
+    TON:  { id: 'the-open-network',   name: 'Toncoin',           symbol: 'TON'  },
+    AVAX: { id: 'avalanche-2',        name: 'Avalanche',         symbol: 'AVAX' },
+    SHIB: { id: 'shiba-inu',          name: 'Shiba Inu',         symbol: 'SHIB' },
+    LINK: { id: 'chainlink',          name: 'Chainlink',         symbol: 'LINK' },
+    DOT:  { id: 'polkadot',           name: 'Polkadot',          symbol: 'DOT'  },
+    BCH:  { id: 'bitcoin-cash',       name: 'Bitcoin Cash',      symbol: 'BCH'  },
+    NEAR: { id: 'near',               name: 'NEAR Protocol',     symbol: 'NEAR' },
+    MATIC:{ id: 'matic-network',      name: 'Polygon',           symbol: 'MATIC'},
+    POL:  { id: 'matic-network',      name: 'Polygon',           symbol: 'POL'  },
+    LTC:  { id: 'litecoin',           name: 'Litecoin',          symbol: 'LTC'  },
+    ICP:  { id: 'internet-computer',  name: 'Internet Computer', symbol: 'ICP'  },
+    UNI:  { id: 'uniswap',            name: 'Uniswap',           symbol: 'UNI'  },
+    APT:  { id: 'aptos',              name: 'Aptos',             symbol: 'APT'  },
+    PEPE: { id: 'pepe',               name: 'Pepe',              symbol: 'PEPE' },
+    WIF:  { id: 'dogwifcoin',         name: 'dogwifhat',         symbol: 'WIF'  },
+    BONK: { id: 'bonk',               name: 'Bonk',              symbol: 'BONK' },
+    XLM:  { id: 'stellar',            name: 'Stellar',           symbol: 'XLM'  },
+    ATOM: { id: 'cosmos',             name: 'Cosmos',            symbol: 'ATOM' },
+    OP:   { id: 'optimism',           name: 'Optimism',          symbol: 'OP'   },
+    ARB:  { id: 'arbitrum',           name: 'Arbitrum',          symbol: 'ARB'  },
+    FIL:  { id: 'filecoin',           name: 'Filecoin',          symbol: 'FIL'  },
+    HBAR: { id: 'hedera-hashgraph',   name: 'Hedera',            symbol: 'HBAR' },
+    VET:  { id: 'vechain',            name: 'VeChain',           symbol: 'VET'  },
+    MKR:  { id: 'maker',              name: 'Maker',             symbol: 'MKR'  },
+    AAVE: { id: 'aave',               name: 'Aave',              symbol: 'AAVE' },
+    INJ:  { id: 'injective-protocol', name: 'Injective',         symbol: 'INJ'  },
+    SUI:  { id: 'sui',                name: 'Sui',               symbol: 'SUI'  },
+    GRT:  { id: 'the-graph',          name: 'The Graph',         symbol: 'GRT'  },
+    ALGO: { id: 'algorand',           name: 'Algorand',          symbol: 'ALGO' },
+    SAND: { id: 'the-sandbox',        name: 'The Sandbox',       symbol: 'SAND' },
+    MANA: { id: 'decentraland',       name: 'Decentraland',      symbol: 'MANA' },
+    AXS:  { id: 'axie-infinity',      name: 'Axie Infinity',     symbol: 'AXS'  },
+    XMR:  { id: 'monero',             name: 'Monero',            symbol: 'XMR'  },
+    EOS:  { id: 'eos',                name: 'EOS',               symbol: 'EOS'  },
+    ZEC:  { id: 'zcash',              name: 'Zcash',             symbol: 'ZEC'  },
+    FLOW: { id: 'flow',               name: 'Flow',              symbol: 'FLOW' },
+    FTM:  { id: 'fantom',             name: 'Fantom',            symbol: 'FTM'  },
+    CRO:  { id: 'crypto-com-chain',   name: 'Cronos',            symbol: 'CRO'  },
+    RUNE: { id: 'thorchain',          name: 'THORChain',         symbol: 'RUNE' },
+    LDO:  { id: 'lido-dao',           name: 'Lido DAO',          symbol: 'LDO'  },
+    RNDR: { id: 'render-token',       name: 'Render',            symbol: 'RNDR' },
+    SEI:  { id: 'sei-network',        name: 'Sei',               symbol: 'SEI'  },
+    TIA:  { id: 'celestia',           name: 'Celestia',          symbol: 'TIA'  },
+    USDT: { id: 'tether',             name: 'Tether',            symbol: 'USDT' },
+    USDC: { id: 'usd-coin',           name: 'USD Coin',          symbol: 'USDC' },
+    DAI:  { id: 'dai',                name: 'Dai',               symbol: 'DAI'  },
+    BITCOIN:    { id: 'bitcoin',          name: 'Bitcoin',       symbol: 'BTC'  },
+    ETHEREUM:   { id: 'ethereum',         name: 'Ethereum',      symbol: 'ETH'  },
+    SOLANA:     { id: 'solana',           name: 'Solana',        symbol: 'SOL'  },
+    DOGECOIN:   { id: 'dogecoin',         name: 'Dogecoin',      symbol: 'DOGE' },
+    CARDANO:    { id: 'cardano',          name: 'Cardano',       symbol: 'ADA'  },
+    RIPPLE:     { id: 'ripple',           name: 'XRP',           symbol: 'XRP'  },
+    POLKADOT:   { id: 'polkadot',         name: 'Polkadot',      symbol: 'DOT'  },
+    POLYGON:    { id: 'matic-network',    name: 'Polygon',       symbol: 'MATIC'},
+    AVALANCHE:  { id: 'avalanche-2',      name: 'Avalanche',     symbol: 'AVAX' },
+    CHAINLINK:  { id: 'chainlink',        name: 'Chainlink',     symbol: 'LINK' },
+    UNISWAP:    { id: 'uniswap',          name: 'Uniswap',       symbol: 'UNI'  },
+    LITECOIN:   { id: 'litecoin',         name: 'Litecoin',      symbol: 'LTC'  },
+    COSMOS:     { id: 'cosmos',           name: 'Cosmos',        symbol: 'ATOM' },
+    STELLAR:    { id: 'stellar',          name: 'Stellar',       symbol: 'XLM'  },
+    MONERO:     { id: 'monero',           name: 'Monero',        symbol: 'XMR'  },
+    OPTIMISM:   { id: 'optimism',         name: 'Optimism',      symbol: 'OP'   },
+    ARBITRUM:   { id: 'arbitrum',         name: 'Arbitrum',      symbol: 'ARB'  },
+    FANTOM:     { id: 'fantom',           name: 'Fantom',        symbol: 'FTM'  },
+    TONCOIN:    { id: 'the-open-network', name: 'Toncoin',       symbol: 'TON'  },
+    THORCHAIN:  { id: 'thorchain',        name: 'THORChain',     symbol: 'RUNE' },
+    CELESTIA:   { id: 'celestia',         name: 'Celestia',      symbol: 'TIA'  },
+    INJECTIVE:  { id: 'injective-protocol', name: 'Injective',   symbol: 'INJ'  },
   };
 
   const COIN_COLORS = {
-    bitcoin: '#f7931a', ethereum: '#627eea', solana: '#9945ff',
-    binancecoin: '#f3ba2f', ripple: '#346aa9', cardano: '#0033ad',
-    dogecoin: '#c2a633', 'the-open-network': '#0088cc',
-    'avalanche-2': '#e84142', 'shiba-inu': '#ffa409',
-    chainlink: '#2a5ada', polkadot: '#e6007a', 'bitcoin-cash': '#8dc351',
-    near: '#00c1de', 'matic-network': '#8247e5', litecoin: '#8c8c8c',
-    uniswap: '#ff007a', aptos: '#2de4c0', stellar: '#7d00ff',
-    cosmos: '#6f7390', optimism: '#ff0420', arbitrum: '#12aaff',
-    monero: '#ff6600', maker: '#1aab9b', aave: '#b6509e',
-    'injective-protocol': '#00b2ff', sui: '#4da2ff', tron: '#ff0013',
+    bitcoin:              '#f7931a',
+    ethereum:             '#627eea',
+    solana:               '#9945ff',
+    binancecoin:          '#f3ba2f',
+    ripple:               '#346aa9',
+    cardano:              '#0033ad',
+    dogecoin:             '#c2a633',
+    'the-open-network':   '#0088cc',
+    'avalanche-2':        '#e84142',
+    'shiba-inu':          '#ffa409',
+    chainlink:            '#2a5ada',
+    polkadot:             '#e6007a',
+    'bitcoin-cash':       '#8dc351',
+    near:                 '#00c1de',
+    'matic-network':      '#8247e5',
+    litecoin:             '#8c8c8c',
+    uniswap:              '#ff007a',
+    aptos:                '#2de4c0',
+    stellar:              '#7d00ff',
+    cosmos:               '#6f7390',
+    optimism:             '#ff0420',
+    arbitrum:             '#12aaff',
+    monero:               '#ff6600',
+    maker:                '#1aab9b',
+    aave:                 '#b6509e',
+    'injective-protocol': '#00b2ff',
+    sui:                  '#4da2ff',
+    tron:                 '#ff0013',
+    algorand:             '#000000',
+    filecoin:             '#0090ff',
+    'hedera-hashgraph':   '#8259ef',
+    vechain:              '#15bdff',
+    pepe:                 '#00c814',
+    'internet-computer':  '#f15a24',
+    'the-graph':          '#6f41d8',
+    'the-sandbox':        '#00adef',
+    decentraland:         '#ff2d55',
+    'axie-infinity':      '#0055d5',
+    eos:                  '#443f54',
+    zcash:                '#f4b728',
+    flow:                 '#00ef8b',
+    tether:               '#26a17b',
+    'usd-coin':           '#2775ca',
+    dai:                  '#f5ac37',
+    dogwifcoin:           '#d97706',
+    bonk:                 '#e86826',
+    fantom:               '#1969ff',
+    'crypto-com-chain':   '#1199fa',
+    thorchain:            '#33ff99',
+    'lido-dao':           '#64acff',
+    'render-token':       '#5865f2',
+    'sei-network':        '#dd4444',
+    celestia:             '#7b2fff',
   };
+
+  const STABLECOINS = new Set(['tether', 'usd-coin', 'dai', 'binance-usd']);
+
+  const _coinCache = new Map();
+  const _COIN_CACHE_TTL = 60_000;
 
   let tooltip = null;
   let hideTimer = null;
@@ -114,7 +183,8 @@
     if (!tooltip) return;
     tooltip.classList.remove('cl-visible');
     const t = tooltip;
-    setTimeout(() => { if (t.parentNode) t.parentNode.removeChild(t); if (tooltip === t) tooltip = null; }, 180);
+    tooltip = null;
+    setTimeout(() => { if (t.parentNode) t.parentNode.removeChild(t); }, 180);
   }
 
   function scheduleHide(ms = 5000) {
@@ -129,7 +199,8 @@
     const W = 296;
     let x = rect.left + rect.width / 2 - W / 2;
     let y = rect.bottom + MARGIN;
-    if (y + 260 > vpH) y = rect.top - MARGIN - 260;
+    const EST_H = 300;
+    if (y + EST_H > vpH) y = rect.top - MARGIN - EST_H;
     x = Math.max(MARGIN, Math.min(x, vpW - W - MARGIN));
     el.style.left = `${x + window.scrollX}px`;
     el.style.top = `${y + window.scrollY}px`;
@@ -175,8 +246,8 @@
     const fillPts = pts + ` ${W},${H} 0,${H}`;
     return `<svg viewBox="0 0 ${W} ${H}" class="cl-spark" preserveAspectRatio="none">
       <defs><linearGradient id="clsg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${color}" stop-opacity="0.18"/><stop offset="100%" stop-color="${color}" stop-opacity="0"/></linearGradient></defs>
-      <polygon points="${fillPts}" fill="url(#clsg)"/>
-      <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      <polygon points="${fillPts}" fill="url(#clsg)" class="cl-spark-fill"/>
+      <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" pathLength="1" class="cl-spark-line"/>
     </svg>`;
   }
 
@@ -195,9 +266,10 @@
     const c1h = fmtChange(data.change1h);
     const bg = COIN_COLORS[coinInfo.id] || '#f7931a';
     const priceText = fmtPrice(data.price, sym);
+    const isStable = STABLECOINS.has(coinInfo.id);
+    const cgUrl = `https://www.coingecko.com/en/coins/${coinInfo.id}`;
     const bUrl = `https://www.binance.com/en/trade/${coinInfo.symbol}_USDT`;
     const tvUrl = `https://www.tradingview.com/chart/?symbol=BINANCE:${coinInfo.symbol}USDT`;
-    const cgUrl = `https://www.coingecko.com/en/coins/${coinInfo.id}`;
     el.innerHTML = `
       <div class="cl-hd">
         <div class="cl-av" style="background:${bg}">${coinInfo.symbol[0]}</div>
@@ -221,14 +293,16 @@
       </div>
       <div class="cl-ft">
         <span class="cl-ath">ATH: ${fmtPrice(data.ath, sym)} <span class="${fmtChange(data.athChangePercent).cls}">(${fmtChange(data.athChangePercent).text})</span></span>
-        <div class="cl-exch">
-          <a class="cl-pill" href="${bUrl}" target="_blank" rel="noopener noreferrer">Binance</a>
-          <a class="cl-pill" href="${tvUrl}" target="_blank" rel="noopener noreferrer">TV</a>
-          <a class="cl-lnk" href="${cgUrl}" target="_blank" rel="noopener noreferrer">CG ↗</a>
+        <div class="cl-ft-right">
+          <div class="cl-exch">
+            ${!isStable ? `<a class="cl-pill" href="${bUrl}" target="_blank" rel="noopener noreferrer">Binance</a>
+            <a class="cl-pill" href="${tvUrl}" target="_blank" rel="noopener noreferrer">TV</a>` : ''}
+            <a class="cl-pill cl-pill-cg" href="${cgUrl}" target="_blank" rel="noopener noreferrer">CG ↗</a>
+          </div>
+          <button class="cl-watch-btn" id="cl-watch-btn">+ Watch</button>
         </div>
       </div>
     `;
-    // Copy price on click
     const pmEl = el.querySelector('.cl-pm');
     if (pmEl) {
       pmEl.addEventListener('click', e => {
@@ -245,7 +319,36 @@
         } catch (_) {}
       });
     }
+    const watchBtn = el.querySelector('#cl-watch-btn');
+    if (watchBtn) {
+      try {
+        chrome.storage.sync.get({ settings: {} }, r => {
+          const wl = (r.settings || {}).watchlist || [];
+          if (wl.includes(coinInfo.id)) {
+            watchBtn.textContent = '✓ Watching';
+            watchBtn.classList.add('cl-watch-active');
+          }
+        });
+      } catch (_) {}
+      watchBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        if (watchBtn.classList.contains('cl-watch-active')) return;
+        try {
+          chrome.runtime.sendMessage({ type: 'ADD_TO_WATCHLIST', payload: { coinId: coinInfo.id } }, r => {
+            if (chrome.runtime.lastError || !r) return;
+            if (r.success) {
+              watchBtn.textContent = '✓ Watching';
+              watchBtn.classList.add('cl-watch-active');
+            } else if (r.reason === 'full') {
+              watchBtn.textContent = 'List full';
+              setTimeout(() => { watchBtn.textContent = '+ Watch'; }, 2000);
+            }
+          });
+        } catch (_) {}
+      });
+    }
     place(el, rect);
+    requestAnimationFrame(() => el.classList.add('cl-visible'));
     scheduleHide(8000);
   }
 
@@ -253,6 +356,7 @@
     const el = getTooltip();
     el.innerHTML = `<div class="cl-err">⚠️ ${msg}</div>`;
     place(el, rect);
+    requestAnimationFrame(() => el.classList.add('cl-visible'));
     scheduleHide(3000);
   }
 
@@ -266,7 +370,7 @@
       if (!sel || sel.isCollapsed || sel.rangeCount === 0) return;
       const raw = sel.toString().trim();
       if (!raw || raw.length > 25 || raw.length < 2) return;
-      const key = raw.toUpperCase().replace(/[^A-Z]/g, '');
+      const key = raw.toUpperCase().replace(/[^A-Z0-9]/g, '');
       if (!key) return;
       const coinInfo = COIN_MAP[key];
       if (!coinInfo) return;
@@ -275,14 +379,20 @@
       const rect = range.getBoundingClientRect();
       if (!rect.width && !rect.height) return;
 
-      showLoading(rect);
+      const cached = _coinCache.get(coinInfo.id);
+      if (cached && (Date.now() - cached.ts < _COIN_CACHE_TTL)) {
+        showData(coinInfo, cached.data, rect);
+        return;
+      }
 
+      showLoading(rect);
       try {
         chrome.runtime.sendMessage({ type: 'GET_COIN_DETAILS', payload: { coinId: coinInfo.id } }, response => {
           if (chrome.runtime.lastError || !response || response.error) {
             showError('Could not fetch price data.', rect);
             return;
           }
+          _coinCache.set(coinInfo.id, { data: response, ts: Date.now() });
           showData(coinInfo, response, rect);
         });
       } catch (_) {
